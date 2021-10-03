@@ -59,8 +59,20 @@ def rand_move(state, player):
                     attack_orders.append(AttackTransferOrder(player, src, dst, use_armies))
         else:
             # if landlocked, move towards border
-            # np.array(mapstruct.graph.shortest_paths())
-            pass
+            # find all shortest paths to a border
+            # then move along a random path
+            shortest_paths = np.array(state.mapstruct.graph.shortest_paths())
+            borders = np.where(state.owner != player)[0]
+            dist_src_to_border = shortest_paths[src, borders].min()
+            neighbors = np.array(state.mapstruct.graph.neighbors(src))
+            assert dist_src_to_border > 0
+            assert len(neighbors) > 0
+            min_dist_neigh_to_border = shortest_paths[neighbors, :][:,borders].min(axis=1)
+            best_neighbors = np.where(min_dist_neigh_to_border == dist_src_to_border-1)[0]
+            dst = neighbors[np.random.choice(best_neighbors)]
+
+            attack_orders.append(AttackTransferOrder(player, src, dst, state.armies[src]))
+
     np.random.shuffle(attack_orders)
     # return deploy_orders + attack_orders
     return OrderList(deploy_orders + attack_orders)
