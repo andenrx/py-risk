@@ -64,7 +64,7 @@ def getMapState(gameid, mapstruct, playerid=633947, botgame=False, return_turn=F
         }
     )
     if isinstance(response["gameInfo"], str):
-        raise Exception(response["gameInfo"])
+        raise ServerException(response["gameInfo"])
 
     standing = response["gameInfo"]["latestStanding"]
     if return_turn:
@@ -104,7 +104,7 @@ def sendOrders(gameid, mapstruct, orders, turn, playerid=633947, botgame=False):
 def call(api, data):
     response = json.loads(requests.post(ROOT + api, json=data).text)
     if "error" in response:
-        raise Exception(response["error"])
+        raise ServerException(response["error"])
     return response
 
 def handleToken(token):
@@ -153,4 +153,7 @@ def parseOwner(owner):
     if owner == "Neutral":
         return 0
     return int(owner)
+
+class ServerException(Exception):
+    pass
 
