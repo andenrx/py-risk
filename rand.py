@@ -3,7 +3,7 @@ from orders import AttackTransferOrder, DeployOrder, OrderList
 
 def fixed_round(n): return np.floor(n + 0.5)
 
-def rand_partition(n: int, k: int) -> list[int]:
+def rand_partition(n: int, k: int) -> list:
     """Randomly partition n elements into k buckets (not uniformly)"""
     samples = np.random.randint(k, size=n)
     return np.eye(k, dtype=int)[samples].sum(axis=0)
