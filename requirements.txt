@@ -1,5 +1,5 @@
 numpy
 requests
-igraph
+python-igraph
 argparse
 https://github.com/ImparaAI/monte-carlo-tree-search/archive/refs/tags/v1.3.1.tar.gz

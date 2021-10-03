@@ -1,7 +1,7 @@
-from enum import IntEnum
+import igraph
 import requests
 import json
-import igraph
+from enum import IntEnum
 from uuid import uuid4
 from game_types import Bonus, MapStructure, MapState
 
@@ -102,7 +102,7 @@ def sendOrders(gameid, mapstruct, orders, turn, playerid=633947, botgame=False):
     return response
 
 def call(api, data):
-    response = json.loads(requests.post(ROOT + api, json=data).text)#.content.decode("utf-8"))
+    response = json.loads(requests.post(ROOT + api, json=data).text)
     if "error" in response:
         raise Exception(response["error"])
     return response
