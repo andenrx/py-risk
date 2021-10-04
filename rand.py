@@ -61,7 +61,7 @@ def rand_move(state, player):
             # if landlocked, move towards border
             # find all shortest paths to a border
             # then move along a random path
-            shortest_paths = np.array(state.mapstruct.graph.shortest_paths())
+            shortest_paths = shortest_paths_memoized(state.mapstruct.graph)
             borders = np.where(state.owner != player)[0]
             dist_src_to_border = shortest_paths[src, borders].min()
             neighbors = np.array(state.mapstruct.graph.neighbors(src))
@@ -76,4 +76,11 @@ def rand_move(state, player):
     np.random.shuffle(attack_orders)
     # return deploy_orders + attack_orders
     return OrderList(deploy_orders + attack_orders)
+
+def shortest_paths_memoized(graph):
+    if shortest_paths_memoized.last_arg is not graph:
+        shortest_paths_memoized.last_arg = graph
+        shortest_paths_memoized.last_result = np.array(graph.shortest_paths())
+    return shortest_paths_memoized.last_result
+shortest_paths_memoized.last_arg = None
 
