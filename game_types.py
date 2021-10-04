@@ -13,7 +13,7 @@ class Bonus:
         )
 
     def __repr__(self):
-        return "Bonus: " + repr(self.name)
+        return "Bonus(" + repr(self.name) + ", " + repr(self.value) + ")"
 
 class MapStructure:
     def __init__(self, name, graph, bonuses, ids):
@@ -23,7 +23,7 @@ class MapStructure:
         self.ids = ids
 
     def __repr__(self):
-        return "Map: " + repr(self.name)
+        return "MapStructure(" + repr(self.name) + ")"
 
     def __len__(self):
         return len(self.ids) 
@@ -77,4 +77,7 @@ class MapState:
         for order in orders:
             order(state, inplace=True)
         return state
+
+    def __repr__(self):
+        return "MapState(" + repr(len(self)) + ")"
 
