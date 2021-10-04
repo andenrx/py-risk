@@ -74,7 +74,7 @@ class AttackTransferOrder(Order):
         }
     
     def __repr__(self):
-        return f"Player {self.player} attack/transfer from {self.src} to {self.dst} with {self.armies} armies"
+        return f"AttackTransferOrder(player={self.player}, src={self.src}, dst={self.dst}, armies={self.armies})"
 
 class DeployOrder(Order):
     def __init__(self, player, target, armies):
@@ -94,7 +94,7 @@ class DeployOrder(Order):
         )
 
     def __repr__(self):
-        return f"Player {self.player} deployed {self.armies} armies to {self.target}"
+        return f"DeployOrder(player={self.player}, target={self.target}, armies={self.armies})"
 
     def encode(self, mapstruct):
         return {
