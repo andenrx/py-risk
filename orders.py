@@ -131,4 +131,31 @@ class OrderList(list, Order):
         return [order.encode(mapstruct) for order in self]
 
     def combine(self, other):
-        return OrderList(sorted(self + other, key=lambda move: move.priority()))
+        i = j = 0
+        next_player = np.random.randint(2)
+        result = OrderList()
+        while i < len(self) and j < len(other):
+            if next_player == 0 and self[i].priority() <= other[j].priority():
+                next_player = 1-next_player
+                result.append(self[i])
+                i += 1
+            elif next_player == 1 and self[i].priority() >= other[j].priority():
+                next_player = 1-next_player
+                result.append(other[j])
+                j += 1
+            elif self[i].priority() < other[j].priority():
+                result.append(self[i])
+                i += 1
+            elif self[i].priority() > other[j].priority():
+                result.append(other[j])
+                j += 1
+            else: assert False
+        while i < len(self):
+            result.append(self[i])
+            i += 1
+        while j < len(other):
+            result.append(other[j])
+            j += 1
+        assert len(result) == len(self) + len(other)
+        return result
+
