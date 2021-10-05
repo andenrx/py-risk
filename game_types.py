@@ -16,7 +16,8 @@ class Bonus:
         return "Bonus(" + repr(self.name) + ", " + repr(self.value) + ")"
 
 class MapStructure:
-    def __init__(self, name, graph, bonuses, ids):
+    def __init__(self, mapid, name, graph, bonuses, ids):
+        self.id = mapid
         self.name = name
         self.graph = graph
         self.bonuses = bonuses

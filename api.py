@@ -137,7 +137,7 @@ def create_map_structure(data):
         ))
 
 
-    return MapStructure(data["name"], g, bonuses, new_id_to_old_id)
+    return MapStructure(data["id"], data["name"], g, bonuses, new_id_to_old_id)
 
 def create_map_state(data, mapstruct):
     assert len(mapstruct) == len(data)
