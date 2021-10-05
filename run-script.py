@@ -1,16 +1,17 @@
 import argparse
 import api
-import mcts_helper
-from time import time, sleep
+from bot import RiskBot
+import pickle
 
 def __main__(args):
     botgame = args.player is None
+    mapid = api.MapID[args.map]
     if args.resume is None:
         if botgame:
             invite = [1, "AI@warlight.net"]
         else:
             invite = ["me", args.player]
-        gameid = api.createGame(invite, botgame=botgame, mapid=api.MapID[args.map])
+        gameid = api.createGame(invite, botgame=botgame, mapid=mapid)
         print(f"Starting game {gameid} on {args.map}")
     else:
         gameid = args.resume
@@ -22,31 +23,15 @@ def __main__(args):
         p1 = 633947
         p2 = [player for player in info["players"].keys() if player != 633947][0]
 
-    mapstruct = api.getMapStructure(gameid, botgame=botgame)
-    mapstate = None
-    info = api.getGameInfo(gameid, botgame=botgame)
-    while info["state"] == "Playing" or info["state"] == "WaitingForPlayers":
-        if info["state"] == "WaitingForPlayers" or info["players"][p1]["hasCommittedOrders"]:
-            sleep(10)
-            info = api.getGameInfo(gameid, botgame=botgame)
-            continue
-        mapstate, turn = api.getMapState(gameid, mapstruct, botgame=botgame, playerid=p1, return_turn=True)
-
-        mcts = mcts_helper.setup_mcts(mapstate, p1, p2)
-        start = time()
-        mcts.simulate(args.iter)
-
+    def print_callback(mcts, turn, time, **kwargs):
         winrate = 0.5 * mcts.root_node.win_value / mcts.root_node.visits + 0.5
         print(f"Turn {turn+1:2}:")
-        print(f"  Time: {time() - start:8.2f}s")
+        print(f"  Time: {time:8.2f}s")
         print(f"  Winrate:{100*winrate:6.2f}%")
 
-        orders = mcts.make_choice().move
-        api.sendOrders(gameid, mapstruct, orders, turn+1, playerid=p1, botgame=botgame) 
-
-        info = api.getGameInfo(gameid, botgame=botgame)
-
-    print("Game complete:", info["players"][p1]["state"])
+    bot = RiskBot(gameid, p1, p2, botgame=botgame)
+    result = bot.play_loop(print_callback)
+    print("Game complete:", "Win" if result else "Lose")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play game")
