@@ -22,6 +22,9 @@ class Order:
 class AttackTransferOrder(Order):
     def __init__(self, player, src, dst, armies):
         super().__init__(player)
+        assert isinstance(src, int)
+        assert isinstance(dst, int)
+        assert isinstance(armies, int)
         self.src = src
         self.dst = dst
         self.armies = armies
@@ -33,8 +36,11 @@ class AttackTransferOrder(Order):
 
     def isvalid(self, state):
         return (
-                (self.dst in state.neighbors(self.src))
-            and (self.armies > 0)
+                isinstance(self.armies, int)
+            and isinstance(self.src, int)
+            and isinstance(self.dst, int)
+            and self.dst in state.neighbors(self.src)
+            and self.armies > 0
         )
 
     def execute(self, state):
@@ -89,8 +95,10 @@ class DeployOrder(Order):
 
     def isvalid(self, state):
         return (
-                (state.owner[self.target] == self.player)
-            and (0 < self.armies <= state.income(self.player))
+                isinstance(self.armies, int)
+            and isinstance(self.target, int)
+            and state.owner[self.target] == self.player
+            and 0 < self.armies <= state.income(self.player)
         )
 
     def __repr__(self):
