@@ -8,23 +8,20 @@ class Order:
         self.player = player
 
     def __call__(self, state, inplace=False):
-        assert self.isvalid(state)
+        self.assertvalid(state)
         if not inplace:
             state = state.copy()
-        assert state.isvalid()
+        state.assertvalid()
         return self.execute(state)
     
     def priority(self): raise NotImplementedError()
     def execute(self, state): raise NotImplementedError()
-    def isvalid(self, state): raise NotImplementedError()
+    def assertvalid(self, state): raise NotImplementedError()
     def encode(self, mapstruct): raise NotImplementedError()
 
 class AttackTransferOrder(Order):
     def __init__(self, player, src, dst, armies):
         super().__init__(player)
-        assert isinstance(src, int)
-        assert isinstance(dst, int)
-        assert isinstance(armies, int)
         self.src = src
         self.dst = dst
         self.armies = armies
@@ -34,14 +31,12 @@ class AttackTransferOrder(Order):
 
     def priority(self): return 50
 
-    def isvalid(self, state):
-        return (
-                isinstance(self.armies, int)
-            and isinstance(self.src, int)
-            and isinstance(self.dst, int)
-            and self.dst in state.neighbors(self.src)
-            and self.armies > 0
-        )
+    def assertvalid(self, state):
+        assert np.issubdtype(type(self.armies), int)
+        assert np.issubdtype(type(self.src), int)
+        assert np.issubdtype(type(self.dst), int)
+        assert self.dst in state.neighbors(self.src)
+        assert self.armies > 0
 
     def execute(self, state):
         if state.owner[self.src] != self.player:
@@ -93,13 +88,11 @@ class DeployOrder(Order):
         state.armies[self.target] += self.armies
         return state
 
-    def isvalid(self, state):
-        return (
-                isinstance(self.armies, int)
-            and isinstance(self.target, int)
-            and state.owner[self.target] == self.player
-            and 0 < self.armies <= state.income(self.player)
-        )
+    def assertvalid(self, state):
+        assert np.issubdtype(type(self.armies), int)
+        assert np.issubdtype(type(self.target), int)
+        assert state.owner[self.target] == self.player
+        assert 0 < self.armies <= state.income(self.player)
 
     def __repr__(self):
         return f"DeployOrder(player={self.player}, target={self.target}, armies={self.armies})"
@@ -125,14 +118,11 @@ class OrderList(list, Order):
             order.execute(state)
         return state
 
-    def isvalid(self, state):
-        return (
-                all(
-                    order.isvalid(state) for order in self
-                )
-            and all(
-                a.priority() <= b.priority() for a, b in zip(self[:-1], self[1:])
-            )
+    def assertvalid(self, state):
+        for order in self:
+            order.assertvalid(state)
+        assert all(
+            a.priority() <= b.priority() for a, b in zip(self[:-1], self[1:])
         )
 
     def encode(self, mapstruct):

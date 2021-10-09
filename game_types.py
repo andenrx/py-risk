@@ -60,11 +60,9 @@ class MapState:
             self.mapstruct
         )
 
-    def isvalid(self):
-        return (
-                (self.armies >= 0).all()
-            and len(self.armies) == len(self.owner) == len(self.mapstruct)
-        )
+    def assertvalid(self):
+        assert (self.armies >= 0).all()
+        assert len(self.armies) == len(self.owner) == len(self.mapstruct)
 
     def income(self, player):
         n = 5
