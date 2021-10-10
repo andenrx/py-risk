@@ -24,7 +24,7 @@ def __main__(args):
     def callback(mcts1, mcts2, turn, time, mapstate, **kwargs):
         winrate1 = 0.5 * mcts1.root_node.win_value / mcts1.root_node.visits + 0.5
         winrate2 = 0.5 * mcts2.root_node.win_value / mcts2.root_node.visits + 0.5
-        print(f"Turn {turn+1:2}:")
+        print(f"Turn {turn:2}:")
         print(f"  Time: {time:8.2f}s")
         print(f"  Winrate:{100*winrate1:6.2f}%")
         print(f"  Winrate:{100*winrate2:6.2f}%")

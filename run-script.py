@@ -33,7 +33,7 @@ def __main__(args):
             info = api.getGameInfo(gameid, botgame=botgame)
 
     data = {
-        "map": int(mapid)
+        "map": int(mapid),
         "turns": []
     }
     def callback(mcts, turn, time, mapstate, **kwargs):
