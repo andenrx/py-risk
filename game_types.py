@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 class Bonus:
     def __init__(self, name, territories, value):
@@ -29,6 +30,12 @@ class MapStructure:
         owner[np.random.randint(0, len(self), 2)] = 1
         owner[np.random.randint(0, len(self), 2)] = 2
         return MapState(armies, owner, self)
+
+    def edgeTensor(self):
+        return torch.tensor(
+            [[edge.source, edge.target] for edge in self.graph.es],
+            dtype=torch.long
+        ).T
 
     def __repr__(self):
         return "MapStructure(" + repr(self.name) + ")"
@@ -83,6 +90,21 @@ class MapState:
         for order in orders:
             order(state, inplace=True)
         return state
+
+    def to_tensor(self, p1=1, p2=2):
+        graph_features = torch.tensor([
+            self.armies,
+            self.owner == p1,
+            self.owner == p2
+        ], dtype=torch.float).T
+        global_features = torch.tensor([
+            self.income(p1),
+            self.income(p2),
+            self.armies[self.owner == p1].sum(),
+            self.armies[self.owner == p2].sum()
+        ], dtype=torch.float)
+        edges = self.mapstruct.edgeTensor()
+        return graph_features, global_features, edges
 
     def __repr__(self):
         return "MapState(" + repr(len(self)) + ")"

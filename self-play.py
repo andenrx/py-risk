@@ -21,6 +21,15 @@ def __main__(args):
         pickle.dump(mapstruct, open(f"maps/{mapid}.pkl", "wb"))
     mapstate = mapstruct.randState()
 
+    if args.model_1 is not None:
+        model1 = pickle.load(open(args.model_1, "rb"))
+    else:
+        model1 = None
+    if args.model_2 is not None:
+        model2 = pickle.load(open(args.model_2, "rb"))
+    else:
+        model2 = None
+
     print(f"Starting game on {args.map}")
 
     data = {
@@ -46,8 +55,8 @@ def __main__(args):
                 "p2_win_value": int(mcts2.root_node.win_value),
                 "p2_visits": int(mcts2.root_node.visits),
             })
-    def helper(mapstate, player, opponent):
-        mcts = mcts_helper.setup_mcts(mapstate, player, opponent)
+    def helper(mapstate, player, opponent, model):
+        mcts = mcts_helper.MCTS(mapstate, player, opponent, model)
         mcts.simulate(args.iter)
         return mcts
 
@@ -58,8 +67,8 @@ def __main__(args):
             turn += 1
 
             mcts1, mcts2 = parallel([
-                    delayed(helper)(mapstate, 1, 2),
-                    delayed(helper)(mapstate, 2, 1)
+                    delayed(helper)(mapstate, 1, 2, model1),
+                    delayed(helper)(mapstate, 2, 1, model2)
             ])
             orders1 = mcts1.make_choice().move
             orders2 = mcts2.make_choice().move
@@ -86,5 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in api.MapID], help="Map to play on")
     parser.add_argument("--iter", type=int, default=100, help="Number of iterations to run per turn")
     parser.add_argument("--output-dir", type=str, default=None)
+    parser.add_argument("--model-1", type=str, default=None)
+    parser.add_argument("--model-2", type=str, default=None)
     __main__(parser.parse_args())
 
