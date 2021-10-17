@@ -23,6 +23,13 @@ class MapStructure:
         self.bonuses = bonuses
         self.ids = ids
 
+    def randState(self):
+        armies = np.random.randint(0, 5, len(self))
+        owner = np.zeros(len(self), dtype=int)
+        owner[np.random.randint(0, len(self), 2)] = 1
+        owner[np.random.randint(0, len(self), 2)] = 2
+        return MapState(armies, owner, self)
+
     def __repr__(self):
         return "MapStructure(" + repr(self.name) + ")"
 

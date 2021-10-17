@@ -3,6 +3,8 @@ from functools import partial
 import datetime as dt
 import argparse
 import json
+import pickle
+import os
 from time import time, sleep
 
 import api
@@ -11,8 +13,14 @@ import mcts_helper
 
 def __main__(args):
     mapid = api.MapID[args.map]
-    gameid = api.createGame([1,2], botgame=True, mapid=mapid)
-    mapstruct = api.getMapStructure(gameid, botgame=True)
+    if os.path.isfile(f"maps/{mapid}.pkl"):
+        mapstruct = pickle.load(open(f"maps/{mapid}.pkl", "rb"))
+    else:
+        gameid = api.createGame([1,2], botgame=True, mapid=mapid)
+        mapstruct = api.getMapStructure(gameid, botgame=True)
+        pickle.dump(mapstruct, open(f"maps/{mapid}.pkl", "wb"))
+    mapstate = mapstruct.randState()
+
     print(f"Starting game on {args.map}")
 
     data = {
@@ -43,7 +51,6 @@ def __main__(args):
         mcts.simulate(args.iter)
         return mcts
 
-    mapstate = api.getMapState(gameid, mapstruct, botgame=True, playerid=1)
     turn = 0
     with Parallel(2) as parallel:
         while mapstate.winner() is None:
