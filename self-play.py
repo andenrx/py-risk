@@ -11,17 +11,11 @@ import api
 from bot import RiskBot
 import mcts_helper
 from nn import *
+from utils import *
 
 def __main__(args):
     mapid = api.MapID[args.map]
-    os.makedirs(args.maps_dir, exist_ok=True)
-    if os.path.isfile(f"{args.maps_dir}/{mapid}.pkl"):
-        mapstruct = pickle.load(open(f"{args.maps_dir}/{mapid}.pkl", "rb"))
-    else:
-        print("Downloading map")
-        gameid = api.createGame([1,2], botgame=True, mapid=mapid)
-        mapstruct = api.getMapStructure(gameid, botgame=True)
-        pickle.dump(mapstruct, open(f"{args.maps_dir}/{mapid}.pkl", "wb"))
+    mapstruct = load_mapstruct(mapid, cache=args.map_cache)
     mapstate = mapstruct.randState()
 
     if args.model_1 is not None:
@@ -104,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("--iter-1", type=int, default=100, help="Number of iterations to run per turn for player 1")
     parser.add_argument("--iter-2", type=int, default=100, help="Number of iterations to run per turn for player 2")
     parser.add_argument("--output-dir", type=str, default=None, help="Directory to store run data in")
-    parser.add_argument("--maps-dir", type=str, default="/tmp/risk-maps", help="Directory to store the map in")
+    parser.add_argument("--map-cache", type=str, default=None, help="Directory to use for map caches")
     parser.add_argument("--model-1", type=str, default=None, help="Pickle of the model to use for player 1")
     parser.add_argument("--model-2", type=str, default=None, help="Pickle of the model to use for player 2")
     __main__(parser.parse_args())
