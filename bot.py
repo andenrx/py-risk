@@ -3,13 +3,14 @@ import mcts_helper
 from time import time, sleep
 
 class RiskBot:
-    def __init__(self, gameid, player, opponent, botgame=False, iterations=100, mapstruct=None):
+    def __init__(self, gameid, player, opponent, botgame=False, iterations=100, mapstruct=None, model=None):
         self.gameid = gameid
         self.player = player
         self.opponent = opponent
         self.botgame = botgame
         self.mapstruct = api.getMapStructure(gameid, botgame=botgame) if mapstruct is None else mapstruct
         self.iter = iterations
+        self.model = model
 
     def play(self):
         mapstate, turn = api.getMapState(
@@ -19,7 +20,7 @@ class RiskBot:
             playerid=self.player,
             return_turn=True
         )
-        mcts = mcts_helper.setup_mcts(mapstate, self.player, self.opponent)
+        mcts = mcts_helper.MCTS(mapstate, self.player, self.opponent, self.model)
         mcts.simulate(self.iter)
         orders = mcts.make_choice().move
         api.sendOrders(

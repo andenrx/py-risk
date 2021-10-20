@@ -5,6 +5,8 @@ from time import sleep
 
 import api
 from bot import RiskBot
+from nn import *
+import pickle
 
 def __main__(args):
     botgame = args.player is None
@@ -31,6 +33,10 @@ def __main__(args):
         while info["state"] == "WaitingForPlayers":
             sleep(10)
             info = api.getGameInfo(gameid, botgame=botgame)
+    if args.model is None:
+        model = None
+    else:
+        model = pickle.load(open(args.model, "rb"))
 
     data = {
         "map": int(mapid),
@@ -50,7 +56,7 @@ def __main__(args):
                 "visits": mcts.root_node.visits,
             })
 
-    bot = RiskBot(gameid, p1, p2, botgame=botgame)
+    bot = RiskBot(gameid, p1, p2, botgame=botgame, model=model)
     result = bot.play_loop(callback)
     data["win"] = result
     print("Game complete:", "Win" if result else "Lose")
@@ -63,6 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in api.MapID], help="Map to play on")
     parser.add_argument("--player", type=str, default=None)
     parser.add_argument("--iter", type=int, default=100, help="Number of iterations to run per turn")
+    parser.add_argument("--model", type=str, default=None, help="")
     parser.add_argument("--output-dir", type=str, default=None)
     __main__(parser.parse_args())
 

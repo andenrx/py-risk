@@ -93,15 +93,21 @@ class MapState:
 
     def to_tensor(self, p1=1, p2=2):
         graph_features = torch.tensor([
-            self.armies,
             self.owner == p1,
-            self.owner == p2
+            self.owner == p2,
+            self.armies * (self.owner == p1),
+            self.armies * (self.owner == p2),
+            self.armies * (self.owner == 0),
+            *[np.isin(np.arange(len(self.mapstruct)), np.array(list(bonus.terr)))
+            for bonus in self.mapstruct.bonuses],
         ], dtype=torch.float).T
+        i1, i2 = self.income(p1), self.income(p2)
+        a1, a2 = self.armies[self.owner == p1].sum(), self.armies[self.owner == p2].sum()
         global_features = torch.tensor([
-            self.income(p1),
-            self.income(p2),
-            self.armies[self.owner == p1].sum(),
-            self.armies[self.owner == p2].sum()
+            np.log(i1 / (i1 + i2)),
+            np.log(i2 / (i1 + i2)),
+            np.log((a1+1) / (a1 + a2 + 2)),
+            np.log((a2+1) / (a1 + a2 + 2)),
         ], dtype=torch.float)
         edges = self.mapstruct.edgeTensor()
         return graph_features, global_features, edges
