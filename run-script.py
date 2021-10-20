@@ -65,11 +65,11 @@ def __main__(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play game")
-    parser.add_argument("--resume", type=int, default=None)
-    parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in api.MapID], help="Map to play on")
-    parser.add_argument("--player", type=str, default=None)
+    parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in api.MapID], help="The map to play on")
+    parser.add_argument("--player", type=str, default=None, help="Email of the player to start the game against, default plays against the built in AI")
+    parser.add_argument("--resume", type=int, default=None, help="The game id to resume playing, default starts a new game")
     parser.add_argument("--iter", type=int, default=100, help="Number of iterations to run per turn")
+    parser.add_argument("--output-dir", type=str, default=None, help="Directory to store run data in")
     parser.add_argument("--model", type=str, default=None, help="")
-    parser.add_argument("--output-dir", type=str, default=None)
     __main__(parser.parse_args())
 
