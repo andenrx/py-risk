@@ -55,6 +55,10 @@ def __main__(args):
                 "p1_visits": int(mcts1.root_node.visits),
                 "p2_win_value": int(mcts2.root_node.win_value),
                 "p2_visits": int(mcts2.root_node.visits),
+                "p1_moves": [child.move.to_json() for child in mcts1.root_node.children],
+                "p1_move_probs": [child.visits / mcts1.root_node.visits for child in mcts1.root_node.children],
+                "p2_moves": [child.move.to_json() for child in mcts2.root_node.children],
+                "p2_move_probs": [child.visits / mcts2.root_node.visits for child in mcts2.root_node.children],
             })
     def helper(mapstate, player, opponent, model, iters):
         mcts = mcts_helper.MCTS(mapstate, player, opponent, model)

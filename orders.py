@@ -1,11 +1,12 @@
 import numpy as np
+from game_types import MapStructure
 
 def fixed_round(x):
     return int(np.floor(x + 0.5))
 
 class Order:
     def __init__(self, player):
-        self.player = player
+        self.player = int(player)
 
     def __call__(self, state, inplace=False):
         self.assertvalid(state)
@@ -18,13 +19,22 @@ class Order:
     def execute(self, state): raise NotImplementedError()
     def assertvalid(self, state): raise NotImplementedError()
     def encode(self, mapstruct): raise NotImplementedError()
+    def to_json(self): raise NotImplementedError()
+    def from_json(data):
+        order_type = data[0]
+        if order_type == "AttackTransferOrder":
+            return AttackTransferOrder(*data[1:])
+        elif order_type == "DeployOrder":
+            return DeployOrder(*data[1:])
+        else:
+            raise Exception(f"Failed to deserialize '{data}'")
 
 class AttackTransferOrder(Order):
     def __init__(self, player, src, dst, armies):
         super().__init__(player)
-        self.src = src
-        self.dst = dst
-        self.armies = armies
+        self.src = int(src)
+        self.dst = int(dst)
+        self.armies = int(armies)
 
     def combat(attack, defend):
         return fixed_round(attack - defend * 0.7), fixed_round(defend - attack * 0.6)
@@ -74,14 +84,18 @@ class AttackTransferOrder(Order):
             "attackTeammates": True
         }
     
+    def to_json(self):
+        return ["AttackTransferOrder", self.player, self.src, self.dst, self.armies]
+
     def __repr__(self):
         return f"AttackTransferOrder(player={self.player}, src={self.src}, dst={self.dst}, armies={self.armies})"
 
 class DeployOrder(Order):
     def __init__(self, player, target, armies):
         super().__init__(player)
-        self.target = target
-        self.armies = armies
+        self.target = int(target)
+        self.armies = int(armies)
+
     def priority(self): return 25
 
     def execute(self, state):
@@ -105,6 +119,9 @@ class DeployOrder(Order):
             "deployOn": mapstruct.ids[self.target]
         }
 
+    def to_json(self):
+        return ["DeployOrder", self.player, self.target, self.armies]
+
 class OrderList(list, Order):
     def __init__(self, orders=None):
         if orders is not None:
@@ -127,6 +144,12 @@ class OrderList(list, Order):
 
     def encode(self, mapstruct):
         return [order.encode(mapstruct) for order in self]
+
+    def to_json(self):
+        return [order.to_json() for order in self]
+
+    def from_json(data):
+        return OrderList([Order.from_json(entry) for entry in data])
 
     def combine(self, other):
         i = j = 0
