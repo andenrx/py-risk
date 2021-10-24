@@ -1,23 +1,16 @@
-from joblib import Parallel, delayed
-from functools import partial
 import datetime as dt
 import argparse
 import json
 import pickle
 import os
-from time import time, sleep
 
 import api
-from bot import RiskBot
-import mcts_helper
 from nn import *
-from utils import *
+from game_manager import *
+from mcts_helper import MCTS
 
 def __main__(args):
     mapid = api.MapID[args.map]
-    mapstruct = load_mapstruct(mapid, cache=args.map_cache)
-    mapstate = mapstruct.randState()
-
     if args.model_1 is not None:
         model1 = pickle.load(open(args.model_1, "rb"))
     else:
@@ -35,59 +28,23 @@ def __main__(args):
         "turns": [],
         "winner": None
     }
-    def callback(mcts1, mcts2, turn, time, mapstate, **kwargs):
-        winrate1 = 0.5 * mcts1.root_node.win_value / mcts1.root_node.visits + 0.5
-        winrate2 = 0.5 * mcts2.root_node.win_value / mcts2.root_node.visits + 0.5
-        print(f"Turn {turn:2}:")
-        print(f"  Time: {time:8.2f}s")
-        print(f"  Winrate:{100*winrate1:6.2f}%")
-        print(f"  Winrate:{100*winrate2:6.2f}%")
 
-        if args.output_dir:
-            data["turns"].append({
-                "owner": mapstate.owner.tolist(),
-                "armies": mapstate.armies.tolist(),
-                "p1_win_value": int(mcts1.root_node.win_value),
-                "p1_visits": int(mcts1.root_node.visits),
-                "p2_win_value": int(mcts2.root_node.win_value),
-                "p2_visits": int(mcts2.root_node.visits),
-                "p1_moves": [child.move.to_json() for child in mcts1.root_node.children],
-                "p1_move_probs": [child.visits / mcts1.root_node.visits for child in mcts1.root_node.children],
-                "p2_moves": [child.move.to_json() for child in mcts2.root_node.children],
-                "p2_move_probs": [child.visits / mcts2.root_node.visits for child in mcts2.root_node.children],
-            })
-    def helper(mapstate, player, opponent, model, iters):
-        mcts = mcts_helper.MCTS(mapstate, player, opponent, model)
-        mcts.simulate(iters)
-        return mcts
+    bot1 = MCTS(None, 1, 2, model1)
+    bot2 = MCTS(None, 2, 1, model2)
+    game = LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
-    turn = 0
-    with Parallel(2) as parallel:
-        while mapstate.winner() is None:
-            start_time = time()
-            turn += 1
+    result = game.play_loop(
+        bot1,
+        bot2,
+        callback=(
+            compose_callbacks(standard_callback, record_data_callback(data))
+            if args.output_dir else
+            standard_callback
+        )
+    )
 
-            mcts1, mcts2 = parallel([
-                    delayed(helper)(mapstate, 1, 2, model1, args.iter_1),
-                    delayed(helper)(mapstate, 2, 1, model2, args.iter_2)
-            ])
-            orders1 = mcts1.make_choice().move
-            orders2 = mcts2.make_choice().move
-
-            mapstate = orders1.combine(orders2)(mapstate)
-
-            callback and callback(
-                turn=turn,
-                mapstate=mapstate,
-                orders1=orders1,
-                orders2=orders2,
-                mcts1=mcts1,
-                mcts2=mcts2,
-                time=time()-start_time
-            )
-
-    data["winner"] = int(mapstate.winner())
-    print(f"Game complete: Player {mapstate.winner()} Won")
+    data["winner"] = result
+    print(f"Game complete: Player {result} Won")
     if args.output_dir:
         os.makedirs(args.output_dir, exist_ok=True)
         json.dump(data, open(f"{args.output_dir}/{dt.datetime.now()}.json", "w"))

@@ -68,7 +68,7 @@ def getMapState(gameid, mapstruct, playerid=633947, botgame=False, return_turn=F
 
     standing = response["gameInfo"]["latestStanding"]
     if return_turn:
-        return create_map_state(standing, mapstruct), int(response["game"]["numberOfTurns"])
+        return create_map_state(standing, mapstruct), int(response["game"]["numberOfTurns"])+1
     else:
         return create_map_state(standing, mapstruct)
 
@@ -78,7 +78,7 @@ def getGameInfo(gameid, botgame=False):
         {"gameID": gameid}
     )
     return {
-        "turn": int(response["game"]["numberOfTurns"]),
+        "turn": int(response["game"]["numberOfTurns"])+1,
         "players": {
             player["id"]: {
                 "state": player["state"],

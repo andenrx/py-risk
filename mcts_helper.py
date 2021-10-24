@@ -1,18 +1,26 @@
 from montecarlo.montecarlo import MonteCarlo
 from montecarlo.node import Node
 from rand import rand_move
+from time import time
 
 class MCTS(MonteCarlo):
-    def __init__(self, mapstate, p1, p2, model=None):
-        self.root_node = Node(mapstate)
-        self.root_node.depth = 0
-        self.root_node.player_number = p1
-        self.root_node.opponent_number = p2
-        self.root_node.unapplied_moves = None
+    def __init__(self, mapstate, p1, p2, model=None, iters=100):
         self.max_depth = 25
         self.player = p1
         self.opponent = p2
         self.model = model
+        self.iters = iters
+        if mapstate is not None: self.setMapState(mapstate)
+
+    def get_move(self):
+        return self.make_choice().move
+
+    def setMapState(self, mapstate):
+        self.root_node = Node(mapstate)
+        self.root_node.depth = 0
+        self.root_node.player_number = self.player
+        self.root_node.opponent_number = self.opponent
+        self.root_node.unapplied_moves = None
 
     def child_finder(self, node, _):
         if node.state.winner() is not None:
@@ -45,7 +53,18 @@ class MCTS(MonteCarlo):
         elif self.model is not None:
             value1 =  self.model(*node.state.to_tensor(self.player, self.opponent)).tolist()
             value2 = -self.model(*node.state.to_tensor(self.opponent, self.player)).tolist()
+            assert -1 <= value1 <= 1
+            assert -1 <= value2 <= 1
             return 0.5 * (value1 + value2)
         elif node.depth >= self.max_depth:
             return 0
+
+    def play(self, mapstate):
+        assert mapstate.winner() is None
+        self.setMapState(mapstate)
+        start = time()
+        self.simulate(self.iters)
+        self.elapsed = time() - start
+        assert self.root_node.children
+        return self.get_move()
 

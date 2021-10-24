@@ -1,12 +1,14 @@
 import datetime as dt
 import argparse
 import json
+import pickle
 from time import sleep
+import os
 
 import api
-from bot import RiskBot
 from nn import *
-import pickle
+from game_manager import *
+from mcts_helper import MCTS
 
 def __main__(args):
     botgame = args.player is None
@@ -39,28 +41,27 @@ def __main__(args):
         model = pickle.load(open(args.model, "rb"))
 
     data = {
+        "self-play": False,
         "map": int(mapid),
-        "turns": []
+        "turns": [],
+        "winner": None
     }
-    def callback(mcts, turn, time, mapstate, **kwargs):
-        winrate = 0.5 * mcts.root_node.win_value / mcts.root_node.visits + 0.5
-        print(f"Turn {turn+1:2}:")
-        print(f"  Time: {time:8.2f}s")
-        print(f"  Winrate:{100*winrate:6.2f}%")
 
-        if args.output_dir:
-            data["turns"].append({
-                "owner": mapstate.owner.tolist(),
-                "armies": mapstate.armies.tolist(),
-                "win_value": mcts.root_node.win_value,
-                "visits": mcts.root_node.visits,
-            })
+    bot = MCTS(None, p1, p2, model)
+    game = RemoteGameManager(gameid, p1, p2, botgame=botgame)
+    result = game.play_loop(
+        bot,
+        callback=(
+            compose_callbacks(standard_callback, record_data_callback(data))
+            if args.output_dir else
+            standard_callback
+        )
+    )
 
-    bot = RiskBot(gameid, p1, p2, botgame=botgame, model=model)
-    result = bot.play_loop(callback)
     data["win"] = result
     print("Game complete:", "Win" if result else "Lose")
     if args.output_dir:
+        os.makedirs(args.output_dir, exist_ok=True)
         json.dump(data, open(f"{args.output_dir}/{dt.datetime.now()}.json", "w"))
 
 if __name__ == "__main__":
