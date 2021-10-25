@@ -36,7 +36,8 @@ class GameManager:
     def gameInfo(self): raise NotImplementedError()
 
     def play_loop(self, *bots, callback=None):
-        while not (info := self.gameInfo()).done:
+        info = self.gameInfo()
+        while not info.done:
             mapstate = self.getMapState()
             for bot in bots:
                 if not info.ready_for_player_to_make_move(bot.player):
@@ -46,6 +47,7 @@ class GameManager:
             if callback:
                 callback(bots, mapstate, info.turn)
             sleep(self.timeout)
+            info = self.gameInfo()
         return info.winner
 
 class RemoteGameManager(GameManager):
