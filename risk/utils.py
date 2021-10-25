@@ -1,8 +1,8 @@
 import pickle
 import os
 
-import api
-from game_types import MapStructure
+from . import api
+from .game_types import MapStructure
 
 def load_mapstruct(mapid: int, cache=None) -> MapStructure:
     """Download a map or load it from a cache"""

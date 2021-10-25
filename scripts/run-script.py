@@ -5,20 +5,18 @@ import pickle
 from time import sleep
 import os
 
-import api
-from nn import *
-from game_manager import *
-from mcts_helper import MCTS
+import risk
+from risk.nn import *
 
 def __main__(args):
     botgame = args.player is None
-    mapid = api.MapID[args.map]
+    mapid = risk.api.MapID[args.map]
     if args.resume is None:
         if botgame:
             invite = [1, "AI@warlight.net"]
         else:
             invite = ["me", args.player]
-        gameid = api.createGame(invite, botgame=botgame, mapid=mapid)
+        gameid = risk.api.createGame(invite, botgame=botgame, mapid=mapid)
         print(f"Starting game {gameid} on {args.map}")
     else:
         gameid = args.resume
@@ -26,7 +24,7 @@ def __main__(args):
     if botgame:
         p1, p2 = 1, 2
     else:
-        info = api.getGameInfo(gameid, botgame=botgame)
+        info = risk.api.getGameInfo(gameid, botgame=botgame)
         p1 = 633947
         p2 = [player for player in info["players"].keys() if player != 633947][0]
 
@@ -34,7 +32,7 @@ def __main__(args):
             print("Waiting for players to join the game")
         while info["state"] == "WaitingForPlayers":
             sleep(10)
-            info = api.getGameInfo(gameid, botgame=botgame)
+            info = risk.api.getGameInfo(gameid, botgame=botgame)
     if args.model is None:
         model = None
     else:
@@ -47,14 +45,14 @@ def __main__(args):
         "winner": None
     }
 
-    bot = MCTS(None, p1, p2, model)
-    game = RemoteGameManager(gameid, p1, p2, botgame=botgame)
+    bot = risk.MCTS(None, p1, p2, model)
+    game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame)
     result = game.play_loop(
         bot,
         callback=(
-            compose_callbacks(standard_callback, record_data_callback(data))
+            risk.compose_callbacks(risk.standard_callback, risk.record_data_callback(data))
             if args.output_dir else
-            standard_callback
+            risk.standard_callback
         )
     )
 
@@ -66,7 +64,7 @@ def __main__(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play game")
-    parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in api.MapID], help="The map to play on")
+    parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in risk.api.MapID], help="The map to play on")
     parser.add_argument("--player", type=str, default=None, help="Email of the player to start the game against, default plays against the built in AI")
     parser.add_argument("--resume", type=int, default=None, help="The game id to resume playing, default starts a new game")
     parser.add_argument("--iter", type=int, default=100, help="Number of iterations to run per turn")

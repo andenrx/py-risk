@@ -1,5 +1,5 @@
 import numpy as np
-from game_types import MapStructure
+from .game_types import MapStructure
 
 def fixed_round(x):
     return int(np.floor(x + 0.5))

@@ -1,6 +1,6 @@
 from montecarlo.montecarlo import MonteCarlo
 from montecarlo.node import Node
-from rand import rand_move
+from .rand import rand_move
 from time import time
 
 class MCTS(MonteCarlo):

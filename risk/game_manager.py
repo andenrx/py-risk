@@ -1,6 +1,6 @@
-import api
+from . import api
 from time import time, sleep
-from utils import load_mapstruct
+from .utils import load_mapstruct
 
 class GameInfo:
     def __init__(self, data):

@@ -1,5 +1,5 @@
 import numpy as np
-from orders import AttackTransferOrder, DeployOrder, OrderList
+from .orders import AttackTransferOrder, DeployOrder, OrderList
 
 def fixed_round(n): return np.floor(n + 0.5)
 

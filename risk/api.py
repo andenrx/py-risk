@@ -3,7 +3,7 @@ import requests
 import json
 from enum import IntEnum
 from uuid import uuid4
-from game_types import Bonus, MapStructure, MapState
+from .game_types import Bonus, MapStructure, MapState
 
 ROOT = "http://aiserver.warzone.com/api/"
 

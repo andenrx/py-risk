@@ -4,7 +4,7 @@ from torch_geometric.nn import GCNConv
 from torch_geometric.data import Data
 import os
 import json
-from game_types import MapState
+from .game_types import MapState
 
 def load_data(directory, mapstruct):
     data = []
