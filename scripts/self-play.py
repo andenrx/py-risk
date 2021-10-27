@@ -5,7 +5,10 @@ import pickle
 import os
 
 import risk
-from risk.nn import *
+try:
+    from risk.nn import *
+except ImportError:
+    pass
 
 def __main__(args):
     mapid = risk.api.MapID[args.map]

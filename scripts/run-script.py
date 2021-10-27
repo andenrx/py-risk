@@ -6,7 +6,10 @@ from time import sleep
 import os
 
 import risk
-from risk.nn import *
+try:
+    from risk.nn import *
+except ImportError:
+    pass
 
 def __main__(args):
     botgame = args.player is None
