@@ -30,8 +30,8 @@ def __main__(args):
         "winner": None
     }
 
-    bot1 = risk.MCTS(None, 1, 2, model1)
-    bot2 = risk.MCTS(None, 2, 1, model2)
+    bot1 = risk.MCTS(None, 1, 2, model1, iters=args.iter_1)
+    bot2 = risk.MCTS(None, 2, 1, model2, iters=args.iter_2)
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
     result = game.play_loop(

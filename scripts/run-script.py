@@ -48,7 +48,7 @@ def __main__(args):
         "winner": None
     }
 
-    bot = risk.MCTS(None, p1, p2, model)
+    bot = risk.MCTS(None, p1, p2, model, iters=args.iter)
     game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame)
     result = game.play_loop(
         bot,
