@@ -44,10 +44,11 @@ class GameManager:
                     continue
                 orders = bot.play(mapstate)
                 self.sendOrders(orders, player=bot.player, turn=info.turn)
-            if callback:
-                callback(bots, mapstate, info.turn)
             sleep(self.timeout)
+            old_info = info
             info = self.gameInfo()
+            if callback and old_info.turn < info.turn:
+                callback(bots, mapstate, old_info.turn)
         return info.winner
 
 class RemoteGameManager(GameManager):
