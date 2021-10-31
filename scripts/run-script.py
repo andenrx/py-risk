@@ -59,7 +59,7 @@ def __main__(args):
         )
     )
 
-    data["win"] = result
+    data["winner"] = result
     print("Game complete:", "Win" if result else "Lose")
     if args.output_dir:
         os.makedirs(args.output_dir, exist_ok=True)
