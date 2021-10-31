@@ -46,11 +46,17 @@ class MCTS(MonteCarlo):
             child.depth = node.depth + 1
             node.add_child(child)
 
+        if self.model and self.model.predict_policy():
+            v, pi = self.model(*node.state.to_tensor(self.player, self.opponent), [child.move for child in node.children])
+            for prior, child in zip(pi.exp().tolist(), node.children):
+                child.update_policy_value(prior * len(node.children))
+            node.update_win_value(v.tolist())
+
     def node_evaluator(self, node, _):
         winner = node.state.winner()
         if winner is not None:
             return 1 if winner == self.root_node.player_number else -1
-        elif self.model is not None:
+        elif self.model and not self.model.predict_policy():
             value1 =  self.model(*node.state.to_tensor(self.player, self.opponent)).tolist()
             value2 = -self.model(*node.state.to_tensor(self.opponent, self.player)).tolist()
             assert -1 <= value1 <= 1
