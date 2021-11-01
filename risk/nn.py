@@ -311,3 +311,91 @@ class Model7(torch.nn.Module):
       V = torch.tanh(self.v_layer(V))[0]
       return V, F.log_softmax(p, dim=0)
 
+def build_attack_tensor(move, x1, xc):
+        ms = [m for m in move if isinstance(m, AttackTransferOrder)]
+        tmp_src = [m.src for m in ms]
+        tmp_dst = [m.dst for m in ms]
+        attack_tensor = torch.cat([
+          xc[tmp_src, :],
+          xc[tmp_dst, :],
+          x1[tmp_src, 3:],
+          x1[tmp_dst, 1:],
+          torch.tensor([[
+            m.armies, 0.6 * m.armies - 0.7 * (x1[m.dst, 3] + x1[m.dst, 4])
+          ] for m in ms]).view(-1, 2)
+        ], dim=1)
+        return attack_tensor
+def build_deploy_tensor(move, x1, xc):
+        ms = [m for m in move if isinstance(m, DeployOrder)]
+        tmp_target = [m.target for m in ms]
+        deploy_tensor = torch.cat([
+          xc[tmp_target, :],
+          x1[tmp_target, 3:],
+          torch.tensor([[m.armies] for m in ms]).view(-1, 1)
+        ], dim=1)
+        return deploy_tensor
+
+import torch
+import torch.nn.functional as F
+from torch.nn import Dropout, Identity, MultiheadAttention
+from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv, GATv2Conv
+
+class Model8(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        G_DIM = 10
+        V_DIM_1 = 20
+        V_DIM_2 = 10
+        O_DIM_1 = 20
+
+        self.init_layer = Linear(15, G_DIM)
+        self.graph1 = GATv2Conv(1 * G_DIM + 15, G_DIM, dropout=0.25)
+        self.graph2 = GATv2Conv(2 * G_DIM + 15, G_DIM, dropout=0.25)
+        self.graph3 = GATv2Conv(3 * G_DIM + 15, G_DIM, dropout=0.25)
+
+        self.v_transform = Linear(15+G_DIM+4, V_DIM_1)
+        # self.v_transform2 = Linear(V_DIM_1, V_DIM_1) # delete this
+        self.v_attention = Linear(V_DIM_1, 1)
+        self.v_value = Linear(V_DIM_1, V_DIM_2)
+        self.v_layer = Linear(V_DIM_2, 1)
+
+        self.attack_transform = Linear(2*G_DIM+30+2-4, O_DIM_1)
+        self.deploy_transform = Linear(G_DIM+15+1-3, O_DIM_1)
+
+        self.order_attention = Linear(O_DIM_1, 1) # SWITCH BACK 10 to 1
+        self.order_value = Linear(O_DIM_1, 1) # COULD TRY ADDING EXTRA LAYER AFTER THIS ????
+
+        self.drop = Dropout(0.25) # use dropout
+
+    def forward(self, x1, x2, edges, moves):
+      x2 = torch.tile(x2, (x1.size()[0], 1))
+      
+      x_ = self.drop(F.relu(self.init_layer(x1)))
+
+      xa = self.graph1(torch.cat([x_, x1], dim=1), edges)
+      xa = F.relu(xa)
+      xb = self.graph2(torch.cat([xa, x_, x1], dim=1), edges)
+      xb = F.relu(xb)
+      xc = self.graph3(torch.cat([xb, xa, x_, x1], dim=1), edges)
+      xc = F.relu(xc)
+
+      p = torch.zeros(len(moves))
+
+      for i, move in enumerate(moves):
+        attack_tensor = build_attack_tensor(move, x1, xc)
+        attack_tensor = self.attack_transform(attack_tensor)
+        deploy_tensor = build_deploy_tensor(move, x1, xc)
+        deploy_tensor = self.deploy_transform(deploy_tensor)
+        
+        order_tensors = self.drop(F.relu(torch.cat([attack_tensor, deploy_tensor], dim=0)))
+        attention = F.softmax(self.order_attention(order_tensors), dim=0)
+        
+        p[i] = (attention * self.order_value(order_tensors)).sum()
+
+      V = torch.cat([xc, x1, x2], dim=1)
+      V = self.drop(F.relu(self.v_transform(V)))
+      attention = F.softmax(self.v_attention(V), dim=0)
+      V = F.relu((attention * self.v_value(V)).sum(dim=0))
+      V = torch.tanh(self.v_layer(V)).view(())
+      return V, F.log_softmax(p, dim=0)
+
