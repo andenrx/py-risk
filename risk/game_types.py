@@ -30,8 +30,12 @@ class MapStructure:
     def randState(self):
         armies = np.random.randint(0, 5, len(self))
         owner = np.zeros(len(self), dtype=int)
-        owner[np.random.randint(0, len(self), 2)] = 1
-        owner[np.random.randint(0, len(self), 2)] = 2
+        if np.random.rand() < 0.5:
+            owner[np.random.randint(0, len(self), 2)] = 1
+            owner[np.random.randint(0, len(self), 2)] = 2
+        else:
+            owner[np.random.randint(0, len(self), 2)] = 2
+            owner[np.random.randint(0, len(self), 2)] = 1
         return MapState(armies, owner, self)
 
     def edgeTensor(self):
