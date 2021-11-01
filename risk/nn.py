@@ -22,7 +22,7 @@ def load_data(directory, mapstruct):
     ]
 
 class Model(torch.nn.Module):
-    def predict_policy(self): return True
+    def predict_policy(self): return False
 
     def __init__(self):
         super().__init__()
@@ -57,7 +57,7 @@ def train_model(model, opt):
         opt.step()
 
 class Model3(torch.nn.Module):
-    def predict_policy(self): return True
+    def predict_policy(self): return False
     def __init__(self):
         super().__init__()
         self.layer1 = GCNConv(16, 8)
@@ -79,7 +79,7 @@ class Model3(torch.nn.Module):
         return torch.tanh(x)
 
 class Model4(torch.nn.Module):
-    def predict_policy(self): return True
+    def predict_policy(self): return False
     def __init__(self):
         super().__init__()
         self.layer1 = Linear(15, 15)
@@ -103,7 +103,7 @@ from torch.nn import Dropout, Identity
 from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv, GATv2Conv
 
 class Model5(torch.nn.Module):
-    def predict_policy(self): return False
+    def predict_policy(self): return True
     def __init__(self):
         super().__init__()
 
@@ -169,7 +169,7 @@ from torch.nn import Dropout, Identity, MultiheadAttention
 from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv, GATv2Conv
 
 class Model6(torch.nn.Module):
-    def predict_policy(self): return False
+    def predict_policy(self): return True
     def __init__(self):
         super().__init__()
         self.g1 = GATv2Conv(15, 10, dropout=0.25)
