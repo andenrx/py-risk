@@ -30,8 +30,8 @@ def __main__(args):
         "winner": None
     }
 
-    bot1 = risk.MCTS(None, 1, 2, model1, iters=args.iter_1)
-    bot2 = risk.MCTS(None, 2, 1, model2, iters=args.iter_2)
+    bot1 = risk.MCTS(None, 1, 2, model1, iters=args.iter_1, max_depth=args.max_depth_1, trust_policy=args.policy_trust_1)
+    bot2 = risk.MCTS(None, 2, 1, model2, iters=args.iter_2, max_depth=args.max_depth_2, trust_policy=args.policy_trust_2)
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
     result = game.play_loop(
@@ -59,5 +59,9 @@ if __name__ == "__main__":
     parser.add_argument("--map-cache", type=str, default=None, help="Directory to use for map caches")
     parser.add_argument("--model-1", type=str, default=None, help="Pickle of the model to use for player 1")
     parser.add_argument("--model-2", type=str, default=None, help="Pickle of the model to use for player 2")
+    parser.add_argument("--max-depth-1", type=int, default=25, help="")
+    parser.add_argument("--max-depth-2", type=int, default=25, help="")
+    parser.add_argument("--policy-trust-1", type=float, default=1.0, help="")
+    parser.add_argument("--policy-trust-2", type=float, default=1.0, help="")
     __main__(parser.parse_args())
 

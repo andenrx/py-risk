@@ -4,12 +4,13 @@ from .rand import rand_move
 from time import time
 
 class MCTS(MonteCarlo):
-    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25):
+    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25, trust_policy=1.0):
         self.max_depth = max_depth
         self.player = p1
         self.opponent = p2
         self.model = model
         self.iters = iters
+        self.trust_policy = trust_policy
         if mapstate is not None: self.setMapState(mapstate)
 
     def get_move(self):
@@ -49,7 +50,7 @@ class MCTS(MonteCarlo):
         if self.model and self.model.predict_policy():
             v, pi = self.model(*node.state.to_tensor(player, opponent), [child.move for child in node.children])
             for prior, child in zip(pi.exp().tolist(), node.children):
-                child.update_policy_value(prior * len(node.children))
+                child.update_policy_value(self.trust_policy * prior * len(node.children) + 1 - self.trust_policy)
             node.update_win_value(
                 v.tolist() if player == self.player else -v.tolist()
             )
