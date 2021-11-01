@@ -4,8 +4,8 @@ from .rand import rand_move
 from time import time
 
 class MCTS(MonteCarlo):
-    def __init__(self, mapstate, p1, p2, model=None, iters=100):
-        self.max_depth = 25
+    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25):
+        self.max_depth = max_depth
         self.player = p1
         self.opponent = p2
         self.model = model
@@ -47,15 +47,17 @@ class MCTS(MonteCarlo):
             node.add_child(child)
 
         if self.model and self.model.predict_policy():
-            v, pi = self.model(*node.state.to_tensor(self.player, self.opponent), [child.move for child in node.children])
+            v, pi = self.model(*node.state.to_tensor(player, opponent), [child.move for child in node.children])
             for prior, child in zip(pi.exp().tolist(), node.children):
                 child.update_policy_value(prior * len(node.children))
-            node.update_win_value(v.tolist())
+            node.update_win_value(
+                v.tolist() if player == self.player else -v.tolist()
+            )
 
     def node_evaluator(self, node, _):
         winner = node.state.winner()
         if winner is not None:
-            return 1 if winner == self.root_node.player_number else -1
+            return 1 if winner == self.player else -1
         elif self.model and not self.model.predict_policy():
             value1 =  self.model(*node.state.to_tensor(self.player, self.opponent)).tolist()
             value2 = -self.model(*node.state.to_tensor(self.opponent, self.player)).tolist()
