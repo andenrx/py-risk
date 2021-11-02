@@ -48,7 +48,7 @@ def __main__(args):
         "winner": None
     }
 
-    bot = risk.MCTS(None, p1, p2, model, iters=args.iter, max_depth=args.max_depth, trust_policy=args.policy_trust)
+    bot = risk.MCTS(None, p1, p2, model, iters=args.iter, max_depth=args.max_depth, trust_policy=args.policy_trust, moves_to_consider=args.moves_consider)
     game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame)
     result = game.play_loop(
         bot,
@@ -75,5 +75,6 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default=None, help="")
     parser.add_argument("--max-depth", type=int, default=25, help="")
     parser.add_argument("--policy-trust", type=float, default=1.0, help="")
+    parser.add_argument("--moves-consider", type=int, default=20, help="")
     __main__(parser.parse_args())
 

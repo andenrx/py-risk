@@ -4,13 +4,14 @@ from .rand import rand_move
 from time import time
 
 class MCTS(MonteCarlo):
-    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25, trust_policy=1.0):
+    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25, trust_policy=1.0, moves_to_consider=20):
         self.max_depth = max_depth
         self.player = p1
         self.opponent = p2
         self.model = model
         self.iters = iters
         self.trust_policy = trust_policy
+        self.moves_to_consider = moves_to_consider
         if mapstate is not None: self.setMapState(mapstate)
 
     def get_move(self):
@@ -27,7 +28,7 @@ class MCTS(MonteCarlo):
         if node.state.winner() is not None:
             return
         if node.parent is None or node.parent.expanded:
-            n = 20
+            n = self.moves_to_consider
         else:
             n = 1
         player = node.player_number
