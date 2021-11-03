@@ -10,22 +10,38 @@ try:
 except ImportError:
     pass
 
+default_player_args = {
+    "model": None,
+    "iter": 100,
+    "moves-consider": 20,
+    "max-depth": 25,
+    "policy-trust": 1.0,
+}
+
 def run(args):
     config = yaml.safe_load(open(f"{args.dir}/config.yaml"))
-    args.dir = os.path.dirname(args.dir)
-    
+
     local = config.pop("local", True)
     if local:
         play = importlib.import_module("self-play").__main__
         if config["player 2"] == "default":
             raise Exception(f"'player 2: default' is not allowed for local runs")
-        for key, value in config.pop("player 1").items():
+
+        player_settings = default_player_args.copy()
+        player_settings.update(config.pop("player 1"))
+        for key, value in player_settings.items():
             config[key + "-1"] = value
-        for key, value in config.pop("player 2").items():
+
+        player_settings = default_player_args.copy()
+        player_settings.update(config.pop("player 2"))
+        for key, value in player_settings.items():
             config[key + "-2"] = value
     else:
         play = importlib.import_module("run-script").__main__
-        for key, value in config.pop("player 1").items():
+
+        player_settings = default_player_args.copy()
+        player_settings.update(config.pop("player 1"))
+        for key, value in player_settings.items():
             config[key] = value
         if config.pop("player 2") != "default":
             raise Exception(f"Expecting 'local: True' or 'player 2: default'")
