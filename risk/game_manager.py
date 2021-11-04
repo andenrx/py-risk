@@ -136,7 +136,6 @@ def standard_callback(bots, mapstate, turn):
 
 def record_data_callback(data):
     def callback(bots, mapstate, turn):
-        winrates = {bot: 0.5 * bot.root_node.win_value / bot.root_node.visits + 0.5 for bot in bots}
         data["turns"].append({
             "owner": mapstate.owner.tolist(),
             "armies": mapstate.armies.tolist(),
