@@ -81,13 +81,17 @@ def analyze(args):
                 },
                 ignore_index=True
             )
+    print(f"Experiment: {args.dir}")
+    print(f"==========")
+    try:
+        config = open(f"{args.dir}/config.yaml").readlines()
+        print("".join("|   " + line for line in config), end="")
+    except FileNotFoundError:
+        print(f"Missing '{args.dir}/config.yaml'")
+    print(f"==========")
     if game_results.empty:
         print("No results found")
     else:
-        print(f"Experiment: {args.dir}")
-        print(f"==========")
-        config = open(f"{args.dir}/config.yaml").readlines()
-        print("".join(" "*4 + line for line in config))
         print("Games:", len(game_results))
         print(f"Win Percent:    {100 * game_results.won.mean():.2f}% ± {100 * 1.96 * 0.5 / math.sqrt(len(game_results)):.2f}%")
         actual_value = (df["result"]/2+0.5).sum()
