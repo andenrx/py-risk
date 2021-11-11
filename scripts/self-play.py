@@ -30,8 +30,8 @@ def __main__(args):
         "winner": None
     }
 
-    bot1 = risk.MCTS(None, 1, 2, model1, iters=args.iter_1, max_depth=args.max_depth_1, trust_policy=args.policy_trust_1, moves_to_consider=args.moves_consider_1)
-    bot2 = risk.MCTS(None, 2, 1, model2, iters=args.iter_2, max_depth=args.max_depth_2, trust_policy=args.policy_trust_2, moves_to_consider=args.moves_consider_2)
+    bot1 = risk.MCTS(None, 1, 2, model1, iters=args.iter_1, max_depth=args.max_depth_1, trust_policy=args.policy_trust_1, moves_to_consider=args.moves_consider_1, timeout=args.time_limit_1, exploration=args.exploration_1)
+    bot2 = risk.MCTS(None, 2, 1, model2, iters=args.iter_2, max_depth=args.max_depth_2, trust_policy=args.policy_trust_2, moves_to_consider=args.moves_consider_2, timeout=args.time_limit_2, exploration=args.exploration_2)
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
     result = game.play_loop(
@@ -65,5 +65,9 @@ if __name__ == "__main__":
     parser.add_argument("--policy-trust-2", type=float, default=1.0, help="")
     parser.add_argument("--moves-consider-1", type=int, default=20, help="")
     parser.add_argument("--moves-consider-2", type=int, default=20, help="")
+    parser.add_argument("--time-limit-1", type=float, default=float("inf"), help="")
+    parser.add_argument("--time-limit-2", type=float, default=float("inf"), help="")
+    parser.add_argument("--exploration-1", type=float, default=0.35, help="")
+    parser.add_argument("--exploration-2", type=float, default=0.35, help="")
     __main__(parser.parse_args())
 

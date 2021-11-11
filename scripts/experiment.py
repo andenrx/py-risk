@@ -16,6 +16,8 @@ default_player_args = {
     "moves-consider": 20,
     "max-depth": 25,
     "policy-trust": 1.0,
+    "time-limit": float("inf"),
+    "exploration": 0.35,
 }
 
 def run(args):

@@ -2,9 +2,10 @@ from montecarlo.montecarlo import MonteCarlo
 from montecarlo.node import Node
 from .rand import rand_move
 from time import time
+import math
 
 class MCTS(MonteCarlo):
-    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25, trust_policy=1.0, moves_to_consider=20):
+    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25, trust_policy=1.0, moves_to_consider=20, timeout=math.inf, exploration=0.35):
         self.max_depth = max_depth
         self.player = p1
         self.opponent = p2
@@ -12,7 +13,16 @@ class MCTS(MonteCarlo):
         self.iters = iters
         self.trust_policy = trust_policy
         self.moves_to_consider = moves_to_consider
+        self.timeout = timeout
+        self.exploration = exploration
         if mapstate is not None: self.setMapState(mapstate)
+
+    def simulate(self, iters=1, timeout=math.inf):
+        finish_time = timeout + time()
+        for _ in range(iters):
+            if time() >= finish_time:
+                break
+            super().simulate()
 
     def get_move(self):
         return self.make_choice().move
@@ -23,6 +33,7 @@ class MCTS(MonteCarlo):
         self.root_node.player_number = self.player
         self.root_node.opponent_number = self.opponent
         self.root_node.unapplied_moves = None
+        self.root_node.discovery_factor = self.exploration
 
     def child_finder(self, node, _):
         if node.state.winner() is not None:
@@ -46,6 +57,7 @@ class MCTS(MonteCarlo):
             child.player_number = opponent
             child.opponent_number = player
             child.depth = node.depth + 1
+            child.discovery_factor = self.exploration
             node.add_child(child)
 
         if self.model and self.model.predict_policy():
@@ -73,7 +85,7 @@ class MCTS(MonteCarlo):
         assert mapstate.winner() is None
         self.setMapState(mapstate)
         start = time()
-        self.simulate(self.iters)
+        self.simulate(self.iters, timeout=self.timeout)
         self.elapsed = time() - start
         assert self.root_node.children
         return self.get_move()
