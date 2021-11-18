@@ -1,8 +1,10 @@
 import numpy as np
 try:
     import torch
+    import torch_geometric
 except ImportError:
     torch = None
+    torch_geometric = None
 
 class Bonus:
     def __init__(self, name, territories, value):
@@ -37,10 +39,12 @@ class MapStructure:
         return MapState(armies, owner, self)
 
     def edgeTensor(self):
-        return torch.tensor(
-            [[edge.source, edge.target] for edge in self.graph.es],
-            dtype=torch.long
-        ).T
+        return torch_geometric.utils.to_undirected(
+            torch.tensor(
+                [[edge.source, edge.target] for edge in self.graph.es],
+                dtype=torch.long
+            ).T
+        )
 
     def __repr__(self):
         return "MapStructure(" + repr(self.name) + ")"
@@ -97,7 +101,7 @@ class MapState:
         return state
 
     def to_tensor(self, p1=1, p2=2):
-        graph_features = torch.tensor([
+        graph_features = torch.tensor(np.array([
             self.owner == p1,
             self.owner == p2,
             self.armies * (self.owner == p1),
@@ -105,7 +109,7 @@ class MapState:
             self.armies * (self.owner == 0),
             *[np.isin(np.arange(len(self.mapstruct)), np.array(list(bonus.terr)))
             for bonus in self.mapstruct.bonuses],
-        ], dtype=torch.float).T
+        ]), dtype=torch.float).T
         i1, i2 = self.income(p1), self.income(p2)
         a1, a2 = self.armies[self.owner == p1].sum(), self.armies[self.owner == p2].sum()
         global_features = torch.tensor([
