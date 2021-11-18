@@ -400,3 +400,122 @@ class Model8(torch.nn.Module):
       V = torch.tanh(self.v_layer(V)).view(())
       return V, F.log_softmax(p, dim=0)
 
+import torch_geometric
+import torch
+import torch.nn.functional as F
+from torch.nn import Dropout, Identity, MultiheadAttention, Sequential
+from torch.nn import ReLU, LeakyReLU
+from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv
+from torch_geometric.nn import GATv2Conv, TransformerConv, GlobalAttention
+from torch_geometric.nn import global_max_pool, GraphNorm
+
+class Model12(torch.nn.Module):
+    def predict_policy(self): return True
+    def __init__(self):
+        super().__init__()
+        X1_DIM = 15
+        G_DIM = 20
+        ORDER_UNITS = 20
+        UNITS_1 = 20
+        self.g1 = TransformerConv(X1_DIM, G_DIM, beta=True)
+        self.g2 = TransformerConv(X1_DIM+G_DIM, G_DIM, beta=True)
+
+        self.att = GlobalAttention(
+            Sequential(Linear(X1_DIM+2*G_DIM, 1)),
+            Sequential(Linear(X1_DIM+2*G_DIM, UNITS_1))
+        )
+        self.lin1 = Linear(UNITS_1+4, 1)
+
+        self.attack_transform   = Linear(2*X1_DIM + 2*2*G_DIM + 2 + 2*10, ORDER_UNITS)
+        self.transfer_transform = Linear(2*X1_DIM + 2*2*G_DIM + 1 + 2*10, ORDER_UNITS)
+        self.deploy_transform   = Linear(  X1_DIM +   2*G_DIM + 1 + 10,   ORDER_UNITS)
+
+        self.order_accumulate = Linear(ORDER_UNITS, 1)
+
+        self.drop = Dropout(0.20)
+        self.norm1 = GraphNorm(G_DIM)
+        self.norm2 = GraphNorm(G_DIM)
+        self.norm3 = GraphNorm(UNITS_1)
+        self.norm4 = GraphNorm(ORDER_UNITS)
+
+    def forward(self, x1, x2, edges, moves):
+        edges = torch_geometric.utils.to_undirected(edges)
+
+        xa = F.relu(self.g1(x1, edges))
+        xa = self.norm1(xa)
+        xb = F.relu(self.g2(torch.cat([x1, xa], dim=1), edges))
+        xb = self.norm2(xb)
+        x = self.att(torch.cat([x1, xa, xb], dim=1), torch.zeros(20, dtype=torch.long)).view(-1)
+        x = self.norm3(x)
+        x = self.lin1(torch.cat([F.relu(x), x2]))
+        V = torch.tanh(x).view(())
+
+        x_cat = torch.cat([xa, xb], dim=1)
+
+        # percent of bonus owned (ignoring given terr)
+        tmp = torch.tensor([[
+          x1[(x1[:,5+j] == 1) & (torch.arange(20) != i), 0].mean() if x1[i,5+j] == 1 else 0
+          for j in range(10)] for i in range(20)
+        ])
+
+        p = torch.zeros(len(moves))
+        for i, move in enumerate(moves):
+            attack_tensor   = self.build_attack_tensor(move, x1, x_cat, tmp)
+            attack_tensor   = self.attack_transform(attack_tensor)
+            transfer_tensor = self.build_transfer_tensor(move, x1, x_cat, tmp)
+            transfer_tensor = self.transfer_transform(transfer_tensor)
+            deploy_tensor   = self.build_deploy_tensor(move, x1, x_cat, tmp)
+            deploy_tensor   = self.deploy_transform(deploy_tensor)
+
+            order_tensors = torch.cat([attack_tensor, transfer_tensor, deploy_tensor], dim=0)
+            order_tensors = self.norm4(order_tensors)
+            order_tensors = self.drop(order_tensors)
+            order_tensors = self.order_accumulate(order_tensors)
+
+            p[i] += order_tensors.sum()
+
+        return V, F.log_softmax(p, dim=0)
+
+    def build_attack_tensor(self, move, x1, X, tmp1):
+        ms = [m for m in move if isinstance(m, AttackTransferOrder) and x1[m.dst, 0] != 1]
+        srcs = [m.src for m in ms]
+        dsts = [m.dst for m in ms]
+
+        attack_tensor = torch.cat([
+            x1[srcs, :],
+            x1[dsts, :],
+            tmp1[srcs, :],
+            tmp1[dsts, :],
+            X[srcs, :],
+            X[dsts, :],
+            torch.tensor([[m.armies, 0.6 * m.armies - 0.7 * (x1[m.dst, 3] + x1[m.dst, 4])] for m in ms]).view(-1, 2)
+        ], dim=1)
+        return attack_tensor
+
+    def build_transfer_tensor(self, move, x1, X, tmp1):
+        ms = [m for m in move if isinstance(m, AttackTransferOrder) and x1[m.dst, 0] == 1]
+        srcs = [m.src for m in ms]
+        dsts = [m.dst for m in ms]
+
+        transfer_tensor = torch.cat([
+            x1[srcs, :],
+            x1[dsts, :],
+            tmp1[srcs, :],
+            tmp1[dsts, :],
+            X[srcs, :],
+            X[dsts, :],
+            torch.tensor([[m.armies] for m in ms]).view(-1, 1)
+        ], dim=1)
+        return transfer_tensor
+
+    def build_deploy_tensor(self, move, x1, X, tmp1):
+        ms = [m for m in move if isinstance(m, DeployOrder)]
+        tgts = [m.target for m in ms]
+        deploy_tensor = torch.cat([
+            x1[tgts, :],
+            tmp1[tgts, :],
+            X[tgts, :],
+            torch.tensor([[m.armies] for m in ms]).view(-1, 1)
+        ], dim=1)
+        return deploy_tensor
+
