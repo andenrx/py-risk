@@ -1,4 +1,5 @@
 import numpy as np
+from functools import lru_cache
 try:
     import torch
     import torch_geometric
@@ -38,6 +39,7 @@ class MapStructure:
 
         return MapState(armies, owner, self)
 
+    @lru_cache(1)
     def edgeTensor(self):
         return torch_geometric.utils.to_undirected(
             torch.tensor(
@@ -45,6 +47,15 @@ class MapStructure:
                 dtype=torch.long
             ).T
         )
+
+    @lru_cache(1)
+    def bonusTensor(self):
+        return torch.tensor(
+            np.array([
+                np.isin(np.arange(len(self)), np.array(list(bonus.terr)))
+                for bonus in self.bonuses
+            ])
+        ).T
 
     def __repr__(self):
         return "MapStructure(" + repr(self.name) + ")"
@@ -107,9 +118,8 @@ class MapState:
             self.armies * (self.owner == p1),
             self.armies * (self.owner == p2),
             self.armies * (self.owner == 0),
-            *[np.isin(np.arange(len(self.mapstruct)), np.array(list(bonus.terr)))
-            for bonus in self.mapstruct.bonuses],
         ]), dtype=torch.float).T
+        graph_features = torch.cat([graph_features, self.mapstruct.bonusTensor()], dim=1)
         i1, i2 = self.income(p1), self.income(p2)
         a1, a2 = self.armies[self.owner == p1].sum(), self.armies[self.owner == p2].sum()
         global_features = torch.tensor([
