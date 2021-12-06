@@ -100,7 +100,7 @@ class MCTS(MonteCarlo):
         if not children:
             node.expanded = False
             return
-        data = DataLoader([self.prep(child) for child in children], batch_size=100)
+        data = DataLoader([self.prep(child, child.player_number, child.opponent_number) for child in children], batch_size=100)
         assert data
 
         vs, pis = [], []
@@ -114,16 +114,14 @@ class MCTS(MonteCarlo):
         pis = torch.cat(pis, dim=0)
 
         for v, pi, child in zip(vs, pis, children):
-            player = child.player_number
-            opponent = child.opponent_number
             for prior, grandchild in zip(pi.exp().tolist(), child.children):
                 grandchild.update_policy_value(self.trust_policy * prior * len(child.children) + 1 - self.trust_policy)
             child.update_win_value(
-                v.item() if player == self.player else -v.item()
+                v.item() if child.player_number == self.player else -v.item()
             )
 
-    def prep(self, node):
-        x1, x2, edges = node.state.to_tensor(self.player, self.opponent)
+    def prep(self, node, player, opponent):
+        x1, x2, edges = node.state.to_tensor(player, opponent)
         edges = torch_geometric.utils.to_undirected(edges)
         assert torch_geometric.utils.is_undirected(edges)
 
