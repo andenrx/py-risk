@@ -87,7 +87,6 @@ class MCTS(MonteCarlo):
             return super().expand(node)
         if not node.children:
             self.child_finder(node, self)
-        node.expanded = True
         children = []
         for child in node.children:
             win_value = self.node_evaluator(child, self)
@@ -99,6 +98,7 @@ class MCTS(MonteCarlo):
 
         if not children:
             return
+        node.expanded = True
         data = DataLoader([self.prep(child) for child in children], batch_size=100)
         assert data
 
