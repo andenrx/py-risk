@@ -23,6 +23,7 @@ def load_data(directory, mapstruct):
 
 class Model(torch.nn.Module):
     def predict_policy(self): return False
+    def batched(self): return False
 
     def __init__(self):
         super().__init__()
@@ -58,6 +59,7 @@ def train_model(model, opt):
 
 class Model3(torch.nn.Module):
     def predict_policy(self): return False
+    def batched(self): return False
     def __init__(self):
         super().__init__()
         self.layer1 = GCNConv(16, 8)
@@ -80,6 +82,7 @@ class Model3(torch.nn.Module):
 
 class Model4(torch.nn.Module):
     def predict_policy(self): return False
+    def batched(self): return False
     def __init__(self):
         super().__init__()
         self.layer1 = Linear(15, 15)
@@ -104,6 +107,7 @@ from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv, GATv2Co
 
 class Model5(torch.nn.Module):
     def predict_policy(self): return True
+    def batched(self): return False
     def __init__(self):
         super().__init__()
 
@@ -170,6 +174,7 @@ from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv, GATv2Co
 
 class Model6(torch.nn.Module):
     def predict_policy(self): return True
+    def batched(self): return False
     def __init__(self):
         super().__init__()
         self.g1 = GATv2Conv(15, 10, dropout=0.25)
@@ -246,6 +251,7 @@ from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv, GATv2Co
 
 class Model7(torch.nn.Module):
     def predict_policy(self): return True
+    def batched(self): return False
 
     def __init__(self):
         super().__init__()
@@ -342,6 +348,7 @@ from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv, GATv2Co
 
 class Model8(torch.nn.Module):
     def predict_policy(self): return True
+    def batched(self): return False
     def __init__(self):
         super().__init__()
         G_DIM = 10
@@ -411,6 +418,7 @@ from torch_geometric.nn import global_max_pool, GraphNorm
 
 class Model12(torch.nn.Module):
     def predict_policy(self): return True
+    def batched(self): return False
     def __init__(self):
         super().__init__()
         X1_DIM = 15
@@ -518,4 +526,178 @@ class Model12(torch.nn.Module):
             torch.tensor([[m.armies] for m in ms]).view(-1, 1)
         ], dim=1)
         return deploy_tensor
+
+import torch_geometric
+import torch
+import torch.nn.functional as F
+from torch.nn import Dropout, Identity, MultiheadAttention, Sequential
+from torch.nn import ReLU, LeakyReLU
+from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv
+from torch_geometric.nn import GATv2Conv, TransformerConv, GlobalAttention
+from torch_geometric.nn import global_max_pool, GraphNorm, global_add_pool
+
+class Model13(torch.nn.Module):
+    def predict_policy(self): return True
+    def batched(self): return True
+    def __init__(self, config):
+        super().__init__()
+        X1_DIM = 15
+        G_DIM = config.G_DIM
+        self.g1 = TransformerConv(X1_DIM, G_DIM, dropout=config.DROPOUT, beta=True)
+        self.g2 = TransformerConv(X1_DIM+G_DIM, G_DIM, dropout=config.DROPOUT, beta=True)
+
+        self.att = GlobalAttention(
+            Sequential(Linear(X1_DIM+2*G_DIM, 1)),
+            Sequential(Linear(X1_DIM+2*G_DIM, config.UNITS_1))
+        )
+        self.lin1 = Linear(config.UNITS_1+4, 1)
+
+        self.attack_transform   = Linear(2*X1_DIM + 2*2*G_DIM + 2 + 2*10, config.ORDER_UNITS)
+        self.transfer_transform = Linear(2*X1_DIM + 2*2*G_DIM + 1 + 2*10, config.ORDER_UNITS)
+        self.deploy_transform   = Linear(  X1_DIM +   2*G_DIM + 1 + 10,   config.ORDER_UNITS)
+
+        self.order_accumulate = Linear(config.ORDER_UNITS, config.FINAL_ORDER_UNITS)
+        self.final_order_layer = Linear(config.FINAL_ORDER_UNITS, 1)
+
+        self.drop = Dropout(config.DROPOUT)
+        self.drop2 = Dropout(config.DROPOUT_2)
+        self.norm1 = GraphNorm(G_DIM)
+        self.norm2 = GraphNorm(G_DIM)
+
+    def forward(self, data):
+        edges = data.edge_index
+        assert torch_geometric.utils.is_undirected(edges)
+        x1 = data.graph_data
+        x2 = data.global_data
+
+        xa = F.relu(self.g1(x1, edges))
+        xa = self.norm1(xa, data.batch)
+        xb = F.relu(self.g2(torch.cat([x1, xa], dim=1), edges))
+        xb = self.norm2(xb, data.batch)
+        x = self.att(torch.cat([x1, xa, xb], dim=1), data.batch)
+        x = self.lin1(torch.cat([F.relu(x), x2], dim=1))
+        V = torch.tanh(x).view(-1)
+
+        x_cat = torch.cat([xa, xb], dim=1)
+
+        attack_tensor = torch.cat([data.attack_data, x_cat[data.asrcs,:], x_cat[data.adsts,:]], dim=1)
+        attack_tensor = self.drop(attack_tensor)
+        attack_tensor = self.attack_transform(attack_tensor)
+        transfer_tensor = torch.cat([data.transfer_data, x_cat[data.tsrcs, :], x_cat[data.tdsts, :]], dim=1)
+        transfer_tensor = self.drop(transfer_tensor)
+        transfer_tensor = self.transfer_transform(transfer_tensor)
+        deploy_tensor = torch.cat([data.deploy_data, x_cat[data.dtgts,:]], dim=1)
+        deploy_tensor = self.drop(deploy_tensor)
+        deploy_tensor = self.deploy_transform(deploy_tensor)
+
+        order_tensors = torch.cat([attack_tensor, transfer_tensor, deploy_tensor], dim=0)
+        order_tensors = self.drop2(order_tensors)
+        order_tensors = self.order_accumulate(order_tensors)
+        tmp = global_add_pool(order_tensors, batch=torch.cat([data.abtch, data.tbtch, data.dbtch], dim=0))
+        assert (data.num_moves == data.num_moves[0]).all()
+        tmp = self.final_order_layer(F.relu(tmp))
+        tmp = tmp.reshape((-1, data.num_moves[0]))
+
+        p = tmp
+
+        return V, F.log_softmax(p, dim=-1)
+
+import torch_geometric
+import torch
+import torch.nn.functional as F
+from torch.nn import Dropout, Identity, MultiheadAttention, Sequential
+from torch.nn import ReLU, LeakyReLU
+from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv
+from torch_geometric.nn import GATv2Conv, TransformerConv, GlobalAttention
+from torch_geometric.nn import SAGEConv, ResGatedGraphConv
+from torch_geometric.nn import global_max_pool, GraphNorm, global_add_pool
+
+class Model14(torch.nn.Module):
+    def predict_policy(self): return True
+    def batched(self): return True
+    def __init__(self):
+        super().__init__()
+        X1_DIM = 15
+        ATT_UNITS = 50
+        G_DIM = 50
+        UNITS_1 = 50
+        UNITS_2 = 50
+        ORDER_UNITS = 20
+        FINAL_ORDER_UNITS = 20
+
+        self.g1 = TransformerConv(X1_DIM, G_DIM, beta=True)
+        self.g2 = TransformerConv(X1_DIM+G_DIM, G_DIM, beta=True)
+        self.g3 = TransformerConv(X1_DIM+2*G_DIM, G_DIM, beta=True)
+
+        self.att = GlobalAttention(
+            Sequential(Linear(X1_DIM+3*G_DIM, ATT_UNITS), LeakyReLU(), Linear(ATT_UNITS, 1)),
+            Sequential(Linear(X1_DIM+3*G_DIM, ATT_UNITS), LeakyReLU(), Linear(ATT_UNITS, UNITS_1))
+        )
+        self.lin1 = Linear(UNITS_1+4, UNITS_2)
+        self.lin2 = Linear(UNITS_2, 1)
+
+        self.attack_transform   = Linear(2*X1_DIM + 2*3*G_DIM + 2 + 2*10, ORDER_UNITS)
+        self.transfer_transform = Linear(2*X1_DIM + 2*3*G_DIM + 1 + 2*10, ORDER_UNITS)
+        self.deploy_transform   = Linear(  X1_DIM +   3*G_DIM + 1 + 10,   ORDER_UNITS)
+
+        self.attack_transform2   = Linear(ORDER_UNITS, ORDER_UNITS)
+        self.transfer_transform2 = Linear(ORDER_UNITS, ORDER_UNITS)
+        self.deploy_transform2   = Linear(ORDER_UNITS, ORDER_UNITS)
+
+
+        self.order_accumulate = Linear(ORDER_UNITS, FINAL_ORDER_UNITS)
+        self.final_order_layer = Linear(FINAL_ORDER_UNITS, 1)
+
+        self.norm1 = GraphNorm(G_DIM)
+        self.norm2 = GraphNorm(G_DIM)
+        self.norm3 = GraphNorm(G_DIM)
+
+    def forward(self, data):
+        edges = data.edge_index
+        assert torch_geometric.utils.is_undirected(edges)
+        x1 = data.graph_data
+        x2 = data.global_data
+
+        xa = F.relu(self.g1(x1, edges))
+        xa = self.norm1(xa, data.batch)
+        xb = F.relu(self.g2(torch.cat([x1, xa], dim=1), edges))
+        xb = self.norm2(xb, data.batch)
+        xc = F.relu(self.g3(torch.cat([x1, xa, xb], dim=1), edges))
+        xc = self.norm3(xc, data.batch)
+        x = self.att(torch.cat([x1, xa, xb, xc], dim=1), data.batch)
+        x = self.lin1(torch.cat([F.relu(x), x2], dim=1))
+        x = F.relu(x)
+        x = self.lin2(x)
+        V = torch.tanh(x).view(-1)
+
+        x_cat = torch.cat([xa, xb, xc], dim=1)
+
+        attack_tensor = torch.cat([data.attack_data, x_cat[data.asrcs,:], x_cat[data.adsts,:]], dim=1)
+        attack_tensor = self.attack_transform(attack_tensor)
+        attack_tensor = F.relu(attack_tensor)
+        attack_tensor = self.attack_transform2(attack_tensor)
+        transfer_tensor = torch.cat([data.transfer_data, x_cat[data.tsrcs, :], x_cat[data.tdsts, :]], dim=1)
+        transfer_tensor = self.transfer_transform(transfer_tensor)
+        transfer_tensor = F.relu(transfer_tensor)
+        transfer_tensor = self.transfer_transform2(transfer_tensor)
+        deploy_tensor = torch.cat([data.deploy_data, x_cat[data.dtgts,:]], dim=1)
+        deploy_tensor = self.deploy_transform(deploy_tensor)
+        deploy_tensor = F.relu(deploy_tensor)
+        deploy_tensor = self.deploy_transform2(deploy_tensor)
+
+        order_tensors = torch.cat([attack_tensor, transfer_tensor, deploy_tensor], dim=0)
+        order_tensors = self.order_accumulate(order_tensors)
+        tmp = global_add_pool(order_tensors, batch=torch.cat([data.abtch, data.tbtch, data.dbtch], dim=0))
+        assert (data.num_moves == data.num_moves[0]).all()
+        tmp = self.final_order_layer(F.relu(tmp))
+        tmp = tmp.reshape((-1, data.num_moves[0]))
+
+        p = tmp
+
+        return V, F.log_softmax(p, dim=-1)
+
+
+
+
+
 
