@@ -85,6 +85,7 @@ class MCTS(MonteCarlo):
     def expand(self, node):
         if self.model is None or not self.model.batched():
             return super().expand(node)
+        node.expanded = True
         if not node.children:
             self.child_finder(node, self)
         children = []
@@ -97,8 +98,8 @@ class MCTS(MonteCarlo):
                 children.append(child)
 
         if not children:
+            node.expanded = False
             return
-        node.expanded = True
         data = DataLoader([self.prep(child) for child in children], batch_size=100)
         assert data
 
