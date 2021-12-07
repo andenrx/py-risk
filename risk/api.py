@@ -10,7 +10,9 @@ ROOT = "http://aiserver.warzone.com/api/"
 class MapID(IntEnum):
     # Map ids, sorted from smallest to largest
     BANANA = 29633 # 12, 4
+    OWL_ISLAND = 24986 # 12, 4
     NEW_ZEALAND_SMALL = 38436 # 18, 8
+    TANZANIA = 22529 # 19, 5
     ITALY = 3448 # 20, 10
     ICELAND = 24221 # 24, 7
     FINLAND = 34615 # 31, 6
