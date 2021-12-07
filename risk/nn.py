@@ -697,6 +697,95 @@ class Model14(torch.nn.Module):
         return V, F.log_softmax(p, dim=-1)
 
 
+class Model14v2(torch.nn.Module):
+    def predict_policy(self): return True
+    def batched(self): return True
+    def __init__(self):
+        super().__init__()
+        X1_DIM = 15
+        G_DIM = 50
+        DROPOUT = 0.1
+        DROPOUT_2 = 0.3
+        ATT_UNITS = 50
+        UNITS_1 = UNITS_2 = 10
+        ORDER_UNITS = 20
+        FINAL_ORDER_UNITS = 20
+        self.g1 = TransformerConv(X1_DIM, G_DIM, dropout=DROPOUT, beta=True)
+        self.g2 = TransformerConv(X1_DIM+G_DIM, G_DIM, dropout=DROPOUT, beta=True)
+        self.g3 = TransformerConv(X1_DIM+2*G_DIM, G_DIM, dropout=DROPOUT, beta=True)
+
+        self.att = GlobalAttention(
+            Sequential(Linear(X1_DIM+3*G_DIM, ATT_UNITS), LeakyReLU(), Linear(ATT_UNITS, 1)),
+            Sequential(Linear(X1_DIM+3*G_DIM, ATT_UNITS), LeakyReLU(), Linear(ATT_UNITS, UNITS_1))
+        )
+        self.lin1 = Linear(UNITS_1+4, UNITS_2)
+        self.lin2 = Linear(UNITS_2, 1)
+
+        self.attack_transform   = Linear(2*X1_DIM + 2*3*G_DIM + 2 + 2*10, ORDER_UNITS)
+        self.transfer_transform = Linear(2*X1_DIM + 2*3*G_DIM + 1 + 2*10, ORDER_UNITS)
+        self.deploy_transform   = Linear(  X1_DIM +   3*G_DIM + 1 + 10,   ORDER_UNITS)
+
+        self.attack_transform2   = Linear(ORDER_UNITS, ORDER_UNITS)
+        self.transfer_transform2 = Linear(ORDER_UNITS, ORDER_UNITS)
+        self.deploy_transform2   = Linear(ORDER_UNITS, ORDER_UNITS)
+
+
+        self.order_accumulate = Linear(ORDER_UNITS, FINAL_ORDER_UNITS)
+        self.final_order_layer = Linear(FINAL_ORDER_UNITS, 1)
+
+        self.drop2 = Dropout(DROPOUT_2)
+        self.norm1 = GraphNorm(G_DIM)
+        self.norm2 = GraphNorm(G_DIM)
+        self.norm3 = GraphNorm(G_DIM)
+
+    def forward(self, data):
+        edges = data.edge_index
+        assert torch_geometric.utils.is_undirected(edges)
+        x1 = data.graph_data
+        x2 = data.global_data
+
+        xa = F.relu(self.g1(x1, edges))
+        xa = self.norm1(xa, data.batch)
+        xb = F.relu(self.g2(torch.cat([x1, xa], dim=1), edges))
+        xb = self.norm2(xb, data.batch)
+        xc = F.relu(self.g3(torch.cat([x1, xa, xb], dim=1), edges))
+        xc = self.norm3(xc, data.batch)
+        x = self.att(torch.cat([x1, xa, xb, xc], dim=1), data.batch)
+        x = self.lin1(torch.cat([F.relu(x), x2], dim=1))
+        x = F.relu(x)
+        x = self.drop2(x)
+        x = self.lin2(x)
+        V = torch.tanh(x).view(-1)
+
+        x_cat = torch.cat([xa, xb, xc], dim=1)
+
+        attack_tensor = torch.cat([data.attack_data, x_cat[data.asrcs,:], x_cat[data.adsts,:]], dim=1)
+        attack_tensor = self.drop2(attack_tensor)
+        attack_tensor = self.attack_transform(attack_tensor)
+        attack_tensor = F.relu(attack_tensor)
+        attack_tensor = self.attack_transform2(attack_tensor)
+        transfer_tensor = torch.cat([data.transfer_data, x_cat[data.tsrcs, :], x_cat[data.tdsts, :]], dim=1)
+        transfer_tensor = self.drop2(transfer_tensor)
+        transfer_tensor = self.transfer_transform(transfer_tensor)
+        transfer_tensor = F.relu(transfer_tensor)
+        transfer_tensor = self.transfer_transform2(transfer_tensor)
+        deploy_tensor = torch.cat([data.deploy_data, x_cat[data.dtgts,:]], dim=1)
+        deploy_tensor = self.drop2(deploy_tensor)
+        deploy_tensor = self.deploy_transform(deploy_tensor)
+        deploy_tensor = F.relu(deploy_tensor)
+        deploy_tensor = self.deploy_transform2(deploy_tensor)
+
+        order_tensors = torch.cat([attack_tensor, transfer_tensor, deploy_tensor], dim=0)
+        order_tensors = self.drop2(order_tensors)
+        order_tensors = self.order_accumulate(order_tensors)
+        tmp = global_add_pool(order_tensors, batch=torch.cat([data.abtch, data.tbtch, data.dbtch], dim=0))
+        assert (data.num_moves == data.num_moves[0]).all()
+        tmp = self.final_order_layer(F.relu(tmp))
+        tmp = tmp.reshape((-1, data.num_moves[0]))
+
+        p = tmp
+
+        return V, F.log_softmax(p, dim=-1)
 
 
 
