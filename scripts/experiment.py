@@ -4,6 +4,7 @@ import yaml
 import json
 import os
 import math
+import random
 import pandas as pd
 try:
     from risk.nn import *
@@ -52,9 +53,12 @@ def run(args):
 
     config["map-cache"] = args.map_cache
     config["output-dir"] = args.dir
+    maps = config["map"]
 
     config = { key.replace("-", "_"): value for key, value in config.items() }
     for i in range(1, args.games + 1):
+        if isinstance(maps, list):
+            config["map"] = random.choice(maps)
         if args.games > 1:
             print(f"Round {i}")
         play(DotDict(config))
