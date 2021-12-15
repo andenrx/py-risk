@@ -88,6 +88,6 @@ def build_order_data(moves, state, x1):
       bonus_features[data["dtgts"], :],
       data["darmies"].view(-1, 1)
   ], dim=1)
-  del data["aarmies"], data["tarmies"], data["darmies"]
+  #del data["aarmies"], data["tarmies"], data["darmies"]
   return data
 

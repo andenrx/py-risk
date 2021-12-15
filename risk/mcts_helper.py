@@ -122,6 +122,8 @@ class MCTS(MonteCarlo):
 
     def prep(self, node, player, opponent):
         x1, x2, edges = node.state.to_tensor(player, opponent)
+        graph_features, _, _ = node.state.to_tensor(player, opponent, full=False)
+        i1, i2 = node.state.income(1), node.state.income(2)
         edges = torch_geometric.utils.to_undirected(edges)
         assert torch_geometric.utils.is_undirected(edges)
 
@@ -132,6 +134,9 @@ class MCTS(MonteCarlo):
             num_moves=len(orders),
             graph_data=x1,
             global_data=x2,
+            graph_features=graph_features,
+            income=torch.tensor([i1, i2]).view(1, -1),
+            total_armies=graph_features[:,2:].sum(dim=0).view(1,-1),
             edge_index=edges,
             **order_data,
         )

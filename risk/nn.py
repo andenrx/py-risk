@@ -788,5 +788,82 @@ class Model14v2(torch.nn.Module):
         return V, F.log_softmax(p, dim=-1)
 
 
+class Model16(torch.nn.Module):
+    def predict_policy(self): return True
+    def batched(self): return True
+    def __init__(self, config):
+        super().__init__()
+
+        self.lin1 = Linear(5*20 + 5, config.UNITS_1)
+        self.lin2 = Linear(config.UNITS_1, config.UNITS_2)
+        self.lin3 = Linear(config.UNITS_2, config.UNITS_3*20)
+        self.lin4 = Linear(config.UNITS_3*20, 1)
+
+        self.drop = Dropout(config.DROPOUT)
+        self.UNITS = config.UNITS_3
+
+        self.attack_transform = Linear(2*self.UNITS+1+10, config.UNITS_4)
+        self.transfer_transform = Linear(2*self.UNITS+1+10, config.UNITS_4)
+        self.deploy_transform = Linear(self.UNITS+1+5, config.UNITS_4)
+        self.attack_transform2 = Linear(config.UNITS_4, config.UNITS_4)
+        self.transfer_transform2 = Linear(config.UNITS_4, config.UNITS_4)
+        self.deploy_transform2 = Linear(config.UNITS_4, config.UNITS_4)
+
+        self.order_layer_2 = Linear(config.UNITS_4, config.UNITS_5)
+
+        self.final_order_layer = Linear(config.UNITS_5, 1)
+
+
+    def forward(self, data):
+      x = data.graph_features
+      x = x.reshape(-1, 5*20)
+      x = torch.cat([x, data.income, data.total_armies], dim=1)
+      x = self.lin1(x)
+      x = F.relu(x)
+      x = self.drop(x)
+      x = self.lin2(x)
+      x = F.relu(x)
+      x = self.drop(x)
+      x = self.lin3(x)
+      x = F.relu(x)
+      x = self.drop(x)
+
+      x_cat = x.reshape(-1, self.UNITS)
+      x_cat = torch.cat([x_cat, data.graph_features], dim=1)
+
+      attack_tensor = torch.cat([data.aarmies.view(-1, 1), x_cat[data.asrcs,:], x_cat[data.adsts,:]], dim=1)
+      attack_tensor = self.attack_transform(attack_tensor)
+      attack_tensor = F.relu(attack_tensor)
+      attack_tensor = self.attack_transform2(attack_tensor)
+      transfer_tensor = torch.cat([data.tarmies.view(-1, 1), x_cat[data.tsrcs, :], x_cat[data.tdsts, :]], dim=1)
+      transfer_tensor = self.transfer_transform(transfer_tensor)
+      transfer_tensor = F.relu(transfer_tensor)
+      transfer_tensor = self.transfer_transform2(transfer_tensor)
+      deploy_tensor = torch.cat([data.darmies.view(-1, 1), x_cat[data.dtgts,:]], dim=1)
+      deploy_tensor = self.deploy_transform(deploy_tensor)
+      deploy_tensor = F.relu(deploy_tensor)
+      deploy_tensor = self.deploy_transform2(deploy_tensor)
+
+      order_tensors = torch.cat([attack_tensor, transfer_tensor, deploy_tensor], dim=0)
+      order_tensors = F.relu(order_tensors)
+
+      order_tensors = self.order_layer_2(order_tensors)
+
+      tmp = global_add_pool(order_tensors, batch=torch.cat([data.abtch, data.tbtch, data.dbtch], dim=0))
+      assert (data.num_moves == data.num_moves[0]).all()
+      tmp = self.final_order_layer(F.relu(tmp))
+      tmp = tmp.reshape((-1, data.num_moves[0]))
+      p = tmp
+
+      pi = F.log_softmax(p, dim=-1)
+
+
+      x = self.lin4(x)
+
+      x = torch.tanh(x).view(-1)
+
+      return x, pi
+
+
 
 

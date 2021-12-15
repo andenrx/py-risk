@@ -111,7 +111,7 @@ class MapState:
             order(state, inplace=True)
         return state
 
-    def to_tensor(self, p1=1, p2=2):
+    def to_tensor(self, p1=1, p2=2, full=True):
         graph_features = torch.tensor(np.array([
             self.owner == p1,
             self.owner == p2,
@@ -119,7 +119,8 @@ class MapState:
             self.armies * (self.owner == p2),
             self.armies * (self.owner == 0),
         ]), dtype=torch.float).T
-        graph_features = torch.cat([graph_features, self.mapstruct.bonusTensor()], dim=1)
+        if full:
+            graph_features = torch.cat([graph_features, self.mapstruct.bonusTensor()], dim=1)
         i1, i2 = self.income(p1), self.income(p2)
         a1, a2 = self.armies[self.owner == p1].sum(), self.armies[self.owner == p2].sum()
         global_features = torch.tensor([
