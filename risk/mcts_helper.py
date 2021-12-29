@@ -123,7 +123,7 @@ class MCTS(MonteCarlo):
     def prep(self, node, player, opponent):
         x1, x2, edges = node.state.to_tensor(player, opponent)
         graph_features, _, _ = node.state.to_tensor(player, opponent, full=False)
-        i1, i2 = node.state.income(1), node.state.income(2)
+        i1, i2 = node.state.income(player), node.state.income(opponent)
         edges = torch_geometric.utils.to_undirected(edges)
         assert torch_geometric.utils.is_undirected(edges)
 
