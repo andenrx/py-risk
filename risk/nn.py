@@ -864,6 +864,98 @@ class Model16(torch.nn.Module):
 
       return x, pi
 
+import torch_geometric
+import torch_sparse
+import torch
+import torch.nn.functional as F
+from torch.nn import Dropout, Identity, MultiheadAttention, Sequential
+from torch.nn import ReLU, LeakyReLU
+from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv
+from torch_geometric.nn import GATv2Conv, TransformerConv, GlobalAttention
+from torch_geometric.nn import SAGEConv, ResGatedGraphConv, GraphNorm, BatchNorm
+from torch_geometric.nn import global_max_pool, global_add_pool, global_mean_pool
+from torch_geometric.nn import JumpingKnowledge
+import torch_geometric
+import torch_sparse
+import torch
+import torch.nn.functional as F
+from torch.nn import Dropout, Identity, MultiheadAttention, Sequential
+from torch.nn import ReLU, LeakyReLU
+from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv
+from torch_geometric.nn import GATv2Conv, TransformerConv, GlobalAttention
+from torch_geometric.nn import SAGEConv, ResGatedGraphConv, GraphNorm, BatchNorm
+from torch_geometric.nn import global_max_pool, global_add_pool, global_mean_pool
+from torch_geometric.nn import JumpingKnowledge
+
+class Model15(torch.nn.Module):
+    def predict_policy(self): return True
+    def batched(self): return True
+
+    def __init__(self):
+        super().__init__()
+        self.init = Linear(5, 20)
+
+        self.b1 = TransformerConv(20, 20, dropout=0.50, beta=True)
+        self.g1 = TransformerConv(20 + 20, 20, dropout=0.50, beta=True)
+        self.b2 = TransformerConv(20, 20, dropout=0.50, beta=True)
+        self.g2 = TransformerConv(20 + 20, 20, dropout=0.50, beta=True)
+        self.b3 = TransformerConv(20, 20, dropout=0.50, beta=True)
+        self.g3 = TransformerConv(20 + 20, 60, dropout=0.50, beta=True)
+
+        self.final1 = Linear(60+5, 60)
+        self.final2 = Linear(60, 1)
+        self.drop = Dropout(0.50)
+
+    def forward(self, data):
+      x = data.graph_features
+
+      # Init layer
+      x = self.init(x)
+      x1 = x = F.relu(x)
+
+      # Bonus layer 1
+      b = x[data.bonus_nodes]
+      b = F.relu(self.b1(b, data.bonus_edges))
+      b = global_add_pool(b, data.bonus_batch)
+      x2 = b = torch_sparse.spmm(data.bonus_mapping, data.bonus_values_normed[data.bonus_mapping[1]], data.num_nodes, data.num_bonuses.sum(), b)
+
+      # Graph layer 1
+      x = torch.cat([x, b], dim=1)
+      x3 = x = F.relu(self.g1(x, data.graph_edges))
+
+      # Bonus layer 2
+      b = x[data.bonus_nodes]
+      b = F.relu(self.b2(b, data.bonus_edges))
+      b = global_add_pool(b, data.bonus_batch)
+      x4 = b = torch_sparse.spmm(data.bonus_mapping, data.bonus_values_normed[data.bonus_mapping[1]], data.num_nodes, data.num_bonuses.sum(), b)
+
+      # Graph layer 2
+      x = torch.cat([x, b], dim=1)
+      x5 = x = F.relu(self.g2(x, data.graph_edges))
+
+      # Bonus layer 3
+      b = x[data.bonus_nodes]
+      b = F.relu(self.b3(b, data.bonus_edges))
+      b = global_add_pool(b, data.bonus_batch)
+      x6 = b = torch_sparse.spmm(data.bonus_mapping, data.bonus_values_normed[data.bonus_mapping[1]], data.num_nodes, data.num_bonuses.sum(), b)
+
+      # Graph layer 3
+      x = torch.cat([x, b], dim=1)
+      x7 = x = F.relu(self.g3(x, data.graph_edges))
+
+      x = global_mean_pool(x, data.batch)
+
+      # assert x.size(0) == data.income.size(0) == data.total_armies.size(0)
+      x = torch.cat([x, data.income, data.total_armies], dim=1)
+      x = self.final1(x)
+      x = F.relu(x)
+      x = self.drop(x)
+      x = self.final2(x)
+
+      x = torch.tanh(x).view(-1)
+      pi = torch.log_softmax(torch.zeros((len(data.num_moves), data.num_moves[0])), dim=1)
+
+      return x, pi
 
 
 

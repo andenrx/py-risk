@@ -1,3 +1,4 @@
+from .api import MapID
 from .orders import *
 try:
     import torch
@@ -11,13 +12,25 @@ try:
           return self.num_moves
         elif 'index' in key or 'face' in key or 'src' in key or 'dst' in key or 'tgt' in key:
           return self.num_nodes
+        elif key == 'graph_edges':
+          return self.num_nodes
+        elif key == 'bonus_edges':
+          return len(self.bonus_nodes)
+        elif key == 'bonus_batch':
+          return self.num_bonuses
+        elif key == 'bonus_nodes':
+          return self.num_nodes
+        elif key == 'bonus_mapping':
+          return torch.tensor([[self.num_nodes], [self.num_bonuses]])
+        elif "src" in key or "dst" in key or "tgt" in key:
+          return self.num_nodes
         else:
           return 0
 
       def __cat_dim__(self, key, value, *args, **kwargs):
         if 'global' in key:
           return None
-        elif 'index' in key or 'face' in key:
+        elif 'index' in key or 'edges' in key or 'mapping' in key:
           return 1
         else:
           return 0
@@ -63,10 +76,14 @@ def extract_from_orders(moves, state):
 
 def build_order_data(moves, state, x1):
   data = extract_from_orders(moves, state)
-  bonus_features = torch.tensor([[
-    x1[(x1[:,5+j] == 1) & (torch.arange(20) != i), 0].mean() if x1[i,5+j] == 1 else 0
-    for j in range(10)] for i in range(20)
-  ])
+  if state.mapstruct.id == int(MapID.ITALY):
+      # These features are map specific!
+      bonus_features = torch.tensor([[
+        x1[(x1[:,5+j] == 1) & (torch.arange(20) != i), 0].mean() if x1[i,5+j] == 1 else 0
+        for j in range(10)] for i in range(20)
+      ])
+  else:
+      bonus_features = torch.tensor([]).view(len(state), 0)
   
   data["attack_data"] = torch.cat([
     x1[data["asrcs"], :],

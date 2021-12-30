@@ -1,5 +1,6 @@
 import numpy as np
 from functools import lru_cache
+from itertools import product
 try:
     import torch
     import torch_geometric
@@ -56,6 +57,32 @@ class MapStructure:
                 for bonus in self.bonuses
             ])
         ).T
+
+    @lru_cache(1)
+    def bonusTensorAlt(self):
+        mask = []
+        nodes = []
+        values = []
+        edges = []
+        mapping = []
+
+        for i, bonus in enumerate(self.bonuses):
+            edges += list(product(
+                range(len(nodes), len(nodes) + len(bonus.terr)),
+                range(len(nodes), len(nodes) + len(bonus.terr))
+            ))
+            nodes += list(bonus.terr)
+            mask += [i] * len(bonus.terr)
+            values.append(bonus.value)
+            for j in bonus.terr:
+                mapping.append([j, i])
+        return (
+            torch.tensor(mask, dtype=torch.long),
+            torch.tensor(nodes, dtype=torch.long),
+            torch.tensor(values, dtype=torch.float),
+            torch.tensor(edges, dtype=torch.long).T,
+            torch.tensor(mapping).T
+        )
 
     def __repr__(self):
         return "MapStructure(" + repr(self.name) + ")"
