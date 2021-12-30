@@ -6,16 +6,43 @@ from time import time
 import math
 
 class MCTS(MonteCarlo):
-    def __init__(self, mapstate, p1, p2, model=None, iters=100, max_depth=25, trust_policy=1.0, moves_to_consider=20, timeout=math.inf, exploration=0.35):
-        self.max_depth = max_depth
+    def __init__(self, mapstate, p1: int, p2: int, model=None, **settings):
+        """Monte Carlo Agent with or without a Model
+
+        mapstate: risk.MapState or None
+            The MapState object for the algorithm to analyze or None
+        p1: int
+            Player number of the player
+        p2: int
+            Player number of the opponent
+        model: Model or None
+            A model object or None
+
+        iters: int (default 100)
+            Number of expansions to perform.
+        max_depth: int (default 25)
+            Terminate rollouts that exceed this depth early
+        trust_policy: float (default 1.0)
+            Weight to put on the policy generated from a model vs uniform prior
+        moves_to_consider: int (default 20)
+            Number of moves to consider at each node
+        timeout: float (default Inf)
+            When calling `play`, terminate simulations early after this many seconds
+        exploration: float (default 0.35)
+            Exploration parameter. This default should probably have been higher (like 1.0).
+        """
         self.player = p1
         self.opponent = p2
         self.model = model
-        self.iters = iters
-        self.trust_policy = trust_policy
-        self.moves_to_consider = moves_to_consider
-        self.timeout = timeout
-        self.exploration = exploration
+
+        self.iters = settings.pop('iters', 100)
+        self.max_depth = settings.pop('max_depth', 25)
+        self.trust_policy = settings.pop('trust_policy', 1.0)
+        self.moves_to_consider = settings.pop('moves_to_consider', 20)
+        self.timeout = settings.pop('timeout', math.inf)
+        self.exploration = settings.pop('exploration', 0.35)
+        if settings:
+            raise TypeError("MCTS got unexpected parameters " + ", ".join(f"'{arg}'" for arg in settings))
         if mapstate is not None: self.setMapState(mapstate)
 
     def simulate(self, iters=1, timeout=math.inf):
