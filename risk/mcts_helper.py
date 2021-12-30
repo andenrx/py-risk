@@ -30,6 +30,8 @@ class MCTS(MonteCarlo):
             When calling `play`, terminate simulations early after this many seconds
         exploration: float (default 0.35)
             Exploration parameter. This default should probably have been higher (like 1.0).
+        cache_opponent_moves: bool (default False)
+            When sampling random moves, whether to reuse the same sample for each opponent Node
         """
         self.player = p1
         self.opponent = p2
@@ -41,6 +43,7 @@ class MCTS(MonteCarlo):
         self.moves_to_consider = settings.pop('moves_to_consider', 20)
         self.timeout = settings.pop('timeout', math.inf)
         self.exploration = settings.pop('exploration', 0.35)
+        self.cache_opponent_moves = settings.pop('cache_opponent_moves', False)
         if settings:
             raise TypeError("MCTS got unexpected parameters " + ", ".join(f"'{arg}'" for arg in settings))
         if mapstate is not None: self.setMapState(mapstate)
@@ -72,21 +75,57 @@ class MCTS(MonteCarlo):
             n = 1
         player = node.player_number
         opponent = node.opponent_number
-        for i in range(n):
-            move = rand_move(node.state, player)
-            if node.unapplied_moves is None:
-                child = Node(node.state.copy())
-                child.unapplied_moves = move
+
+        if self.cache_opponent_moves:
+            assert self.model is None, "TODO"
+            """
+            Have model run on move creation
+            """
+
+            if node.player_number == self.player:
+                node.player_moves   = [rand_move(node.state, player)   for _ in range(n)]
+                node.opponent_moves = [rand_move(node.state, opponent) for _ in range(n)]
+
+                for move in node.player_moves:
+                    child = Node(node.state.copy())
+                    child.move = move
+                    child.player_number = opponent
+                    child.opponent_number = player
+                    child.depth = node.depth + 1
+                    child.discovery_factor = self.exploration
+                    child.parent = node
+                    node.add_child(child)
             else:
-                move = move.combine(node.unapplied_moves)
-                child = Node(move(node.state))
-                child.unapplied_moves = None
-            child.move = move
-            child.player_number = opponent
-            child.opponent_number = player
-            child.depth = node.depth + 1
-            child.discovery_factor = self.exploration
-            node.add_child(child)
+                assert node.parent is not None
+                for move in node.parent.opponent_moves:
+                    combined_move = move.combine(node.move)
+                    child = Node(combined_move(node.state))
+                    child.move = move
+                    child.player_number = opponent
+                    child.opponent_number = player
+                    child.depth = node.depth + 1
+                    child.discovery_factor = self.exploration
+                    child.parent = node
+                    node.add_child(child)
+        else:
+            for i in range(n):
+                # if unapplied moves is None
+                # we want to generate the possible moves for both players
+                # if it is not, then just pass down the possible moves
+                move = rand_move(node.state, player)
+                if node.unapplied_moves is None:
+                    child = Node(node.state.copy())
+                    child.unapplied_moves = move
+                else:
+                    move = move.combine(node.unapplied_moves)
+                    child = Node(move(node.state))
+                    child.unapplied_moves = None
+                child.move = move
+                child.player_number = opponent
+                child.opponent_number = player
+                child.depth = node.depth + 1
+                child.discovery_factor = self.exploration
+                node.add_child(child)
 
         if self.model and self.model.predict_policy() and not self.model.batched():
             v, pi = self.model(*node.state.to_tensor(player, opponent), [child.move for child in node.children])

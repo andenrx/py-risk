@@ -19,6 +19,7 @@ default_player_args = {
     "policy-trust": 1.0,
     "time-limit": float("inf"),
     "exploration": 0.35,
+    "cache-opponent-moves": False,
 }
 
 def run(args):
