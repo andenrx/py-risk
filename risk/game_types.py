@@ -111,7 +111,7 @@ class MapState:
             order(state, inplace=True)
         return state
 
-    def to_tensor(self, p1=1, p2=2, full=True):
+    def to_tensor(self, p1, p2, full=True):
         graph_features = torch.tensor(np.array([
             self.owner == p1,
             self.owner == p2,
