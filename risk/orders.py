@@ -125,8 +125,7 @@ class DeployOrder(Order):
 class OrderList(list, Order):
     def __init__(self, orders=None):
         if orders is not None:
-            super().__init__(orders)
-            # super().__init__(sorted(orders))
+            super().__init__(sorted(orders, key=lambda order: order.priority()))
         else:
             super().__init__()
 
