@@ -13,6 +13,7 @@ setup(
        "requests",
        "python-igraph",
        "imparaai-montecarlo",
+       "wonderwords",
     ],
     extras_require={
         "nn": [

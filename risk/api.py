@@ -2,7 +2,7 @@ import igraph
 import requests
 import json
 from enum import IntEnum
-from uuid import uuid4
+from wonderwords import RandomWord
 from .game_types import Bonus, MapStructure, MapState
 
 ROOT = "http://aiserver.warzone.com/api/"
@@ -24,7 +24,7 @@ def createGame(players, botgame=False, mapid=MapID.SMALL_EARTH):
     return call(
         "CreateBotGame" if botgame else "CreateGame",
         {
-            "gameName": str(uuid4()),
+            "gameName": random_name(),
             "players": [
                 { "token": handleToken(player) }
                 for player in players
@@ -150,6 +150,9 @@ def create_map_state(data, mapstruct):
             [parseOwner(terr["ownedBy"]) for terr in data],
             mapstruct
     )
+
+def random_name():
+    return RandomWord().word(include_parts_of_speech=["adjective"]) + "-" + RandomWord().word(include_parts_of_speech=["noun"])
 
 def parseOwner(owner):
     if owner == "Neutral":

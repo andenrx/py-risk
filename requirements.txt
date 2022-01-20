@@ -3,6 +3,7 @@ requests
 python-igraph
 https://github.com/ImparaAI/monte-carlo-tree-search/archive/refs/tags/v1.3.1.tar.gz
 joblib
+wonderwords
 torch
 torch-scatter -f https://data.pyg.org/whl/torch-1.9.0+cu111.html
 torch-sparse -f https://data.pyg.org/whl/torch-1.9.0+cu111.html
