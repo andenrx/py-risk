@@ -3,6 +3,7 @@ import argparse
 import json
 import pickle
 import os
+from distutils.util import strtobool
 
 import risk
 try:
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--time-limit-2", type=float, default=float("inf"), help="")
     parser.add_argument("--exploration-1", type=float, default=0.35, help="")
     parser.add_argument("--exploration-2", type=float, default=0.35, help="")
-    parser.add_argument("--cache-opponent-moves-1", type=bool, default=False, help="")
-    parser.add_argument("--cache-opponent-moves-2", type=bool, default=False, help="")
+    parser.add_argument("--cache-opponent-moves-1", type=strtobool, default=False, help="")
+    parser.add_argument("--cache-opponent-moves-2", type=strtobool, default=False, help="")
     __main__(parser.parse_args())
 

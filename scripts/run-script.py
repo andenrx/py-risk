@@ -4,6 +4,7 @@ import json
 import pickle
 from time import sleep
 import os
+from distutils.util import strtobool
 
 import risk
 try:
@@ -86,6 +87,6 @@ if __name__ == "__main__":
     parser.add_argument("--moves-consider", type=int, default=20, help="")
     parser.add_argument("--time-limit", type=float, default=float("inf"), help="")
     parser.add_argument("--exploration", type=float, default=0.35, help="")
-    parser.add_argument("--cache-opponent-moves", type=bool, default=False, help="")
+    parser.add_argument("--cache-opponent-moves", type=strtobool, default=False, help="")
     __main__(parser.parse_args())
 
