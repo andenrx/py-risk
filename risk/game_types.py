@@ -84,6 +84,9 @@ class MapStructure:
             torch.tensor(mapping).T
         )
 
+    def terr_name(self, terr):
+        return self.graph.vs[terr]["name"]
+
     def __repr__(self):
         return "MapStructure(" + repr(self.name) + ")"
 
@@ -113,6 +116,17 @@ class MapState:
 
     def neighbors(self, src):
         return self.mapstruct.graph.neighbors(src)
+
+    def borders(self, player, include_neutrals=True):
+        return np.array([
+            src for src in range(len(self))
+            if self.owner[src] == player
+            and any(
+                self.owner[dst] != player
+                and (include_neutrals or self.owner[dst] != 0)
+                for dst in self.neighbors(src)
+            )
+        ])
 
     def copy(self):
         return MapState(
