@@ -15,10 +15,21 @@ class MapID(IntEnum):
     TANZANIA = 51119 # 19, 5
     ITALY = 3448 # 20, 10
     ICELAND = 24221 # 24, 7
+    BRITISH_ISLES = 36084 # 25, 6
     FINLAND = 34615 # 31, 6
+    PLATEAUS = 55574 # 32, 11
     APPLE = 32414 # 36, 13
     SMALL_EARTH = 70306 # 42, 6
+    SPQR = 96770 # 45, 8
+    UNITED_STATES = 149 # 48, 10
+    MIDDLE_EAST = 92434 # 50, 8
+    NORTH_AMERICA = 92435 # 54, 9
+    IMPERIUM_ROMANUM = 72163 # 106, 31
     MEDIUM_EARTH = 19785 # 129, 27
+    MIDDLE_EARTH = 96728 # 269, 150 (89 non-zero)
+    RISE_OF_ROME = 16114 # 273, 83
+    AMERICAN_REVOLUTION = 80849 # 500, 222
+
 
 def createGame(players, botgame=False, mapid=MapID.SMALL_EARTH):
     return call(
