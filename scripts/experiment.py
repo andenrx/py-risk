@@ -20,6 +20,7 @@ default_player_args = {
     "time-limit": float("inf"),
     "exploration": 0.35,
     "cache-opponent-moves": False,
+    "use-mcts": True,
 }
 
 def run(args):

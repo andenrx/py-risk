@@ -31,7 +31,8 @@ def __main__(args):
         "winner": None
     }
 
-    bot1 = risk.MCTS(None, 1, 2, model1,
+    bot1 = (risk.MCTS if args.use_mcts_1 else risk.Random)(
+            None, 1, 2, model1,
             iters=args.iter_1,
             max_depth=args.max_depth_1,
             trust_policy=args.policy_trust_1,
@@ -40,7 +41,8 @@ def __main__(args):
             exploration=args.exploration_1,
             cache_opponent_moves=args.cache_opponent_moves_1,
     )
-    bot2 = risk.MCTS(None, 2, 1, model2,
+    bot2 = (risk.MCTS if args.use_mcts_2 else risk.Random)(
+            None, 2, 1, model2,
             iters=args.iter_2,
             max_depth=args.max_depth_2,
             trust_policy=args.policy_trust_2,
@@ -88,5 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--exploration-2", type=float, default=0.35, help="")
     parser.add_argument("--cache-opponent-moves-1", type=strtobool, default=False, help="")
     parser.add_argument("--cache-opponent-moves-2", type=strtobool, default=False, help="")
+    parser.add_argument("--use-mcts-1", type=strtobool, default=True, help="")
+    parser.add_argument("--use-mcts-2", type=strtobool, default=True, help="")
     __main__(parser.parse_args())
 

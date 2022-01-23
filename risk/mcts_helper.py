@@ -230,3 +230,25 @@ class MCTS(MonteCarlo):
         assert self.root_node.children
         return self.get_move()
 
+class Random(MCTS):
+    """Agent that Randomly selects a move without performing MCTS
+
+    This should probably inherit from something more general than MCTS
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.elapsed = 0
+
+    def setMapState(self, mapstate):
+        self.root_node = Node(mapstate)
+        self.root_node.win_value = 0
+        self.root_node.visits = 1
+
+    def play(self, mapstate):
+        assert mapstate.winner() is None
+        self.setMapState(mapstate)
+        start = time()
+        move = rand_move(mapstate, self.player)
+        self.elapsed = time() - start
+        return move
+
