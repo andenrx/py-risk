@@ -1,5 +1,6 @@
 import igraph
 import requests
+from requests.packages.urllib3.util.retry import Retry
 import json
 from enum import IntEnum
 from wonderwords import RandomWord
@@ -114,8 +115,20 @@ def sendOrders(gameid, mapstruct, orders, turn, playerid=633947, botgame=False):
     )
     return response
 
+
+# Set up requests to use exponential backoff
+adapter = requests.adapters.HTTPAdapter(
+    max_retries=Retry(
+        total=10,
+        backoff_factor=0.5,
+    )
+)
+requests_session = requests.session()
+requests_session.mount("https://", adapter)
+requests_session.mount("http://", adapter)
+
 def call(api, data):
-    response = json.loads(requests.post(ROOT + api, json=data).text)
+    response = json.loads(requests_session.post(ROOT + api, json=data).text)
     if "error" in response:
         raise ServerException(response["error"])
     return response
