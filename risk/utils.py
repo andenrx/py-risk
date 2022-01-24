@@ -1,5 +1,6 @@
 import pickle
 import os
+import random
 
 from . import api
 from .game_types import MapStructure
@@ -18,4 +19,14 @@ def load_mapstruct(mapid: int, cache=None) -> MapStructure:
     if cache is not None:
         pickle.dump(mapstruct, open(f"{cache}/{mapid}.pkl", "wb"))
     return mapstruct
+
+def weighted_choice(choices, weights):
+    p = random.random() * sum(weights)
+    assert any(weight > 0 for weight in weights)
+    for choice, weight in zip(choices, weights):
+        if p < weight:
+            return choice
+        p -= weight
+    else:
+        assert False
 

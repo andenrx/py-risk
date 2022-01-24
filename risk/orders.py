@@ -4,6 +4,14 @@ from .game_types import MapStructure
 def fixed_round(x):
     return int(np.floor(x + 0.5))
 
+def armies_to_take(x):
+    if x == 0:
+        return 1
+    elif x == 1:
+        return 2
+    else:
+        return int(np.floor(x / 0.6))
+
 class Order:
     def __init__(self, player):
         self.player = int(player)

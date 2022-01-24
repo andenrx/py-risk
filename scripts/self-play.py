@@ -40,6 +40,7 @@ def __main__(args):
             timeout=args.time_limit_1,
             exploration=args.exploration_1,
             cache_opponent_moves=args.cache_opponent_moves_1,
+            obj_rand=args.obj_rand_1,
     )
     bot2 = (risk.MCTS if args.use_mcts_2 else risk.Random)(
             None, 2, 1, model2,
@@ -50,6 +51,7 @@ def __main__(args):
             timeout=args.time_limit_2,
             exploration=args.exploration_2,
             cache_opponent_moves=args.cache_opponent_moves_2,
+            obj_rand=args.obj_rand_2,
     )
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
@@ -92,5 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("--cache-opponent-moves-2", type=strtobool, default=False, help="")
     parser.add_argument("--use-mcts-1", type=strtobool, default=True, help="")
     parser.add_argument("--use-mcts-2", type=strtobool, default=True, help="")
+    parser.add_argument("--obj-rand-1", type=strtobool, default=False, help="")
+    parser.add_argument("--obj-rand-2", type=strtobool, default=False, help="")
     __main__(parser.parse_args())
 

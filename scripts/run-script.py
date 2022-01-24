@@ -61,6 +61,7 @@ def __main__(args):
             timeout=args.time_limit,
             exploration=args.exploration,
             cache_opponent_moves=args.cache_opponent_moves,
+            obj_rand=args.obj_rand,
     )
     game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame)
     result = game.play_loop(
@@ -93,5 +94,6 @@ if __name__ == "__main__":
     parser.add_argument("--exploration", type=float, default=0.35, help="")
     parser.add_argument("--cache-opponent-moves", type=strtobool, default=False, help="")
     parser.add_argument("--use-mcts", type=strtobool, default=True, help="")
+    parser.add_argument("--obj-rand", type=strtobool, default=False, help="")
     __main__(parser.parse_args())
 

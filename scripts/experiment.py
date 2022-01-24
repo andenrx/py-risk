@@ -21,6 +21,7 @@ default_player_args = {
     "exploration": 0.35,
     "cache-opponent-moves": False,
     "use-mcts": True,
+    "obj-rand": False,
 }
 
 def run(args):

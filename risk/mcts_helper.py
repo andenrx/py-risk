@@ -1,6 +1,7 @@
 from montecarlo.montecarlo import MonteCarlo
 from montecarlo.node import Node
 from .rand import rand_move
+from .objectives import rand_obj
 from .data_loader import *
 from time import time
 import math
@@ -44,6 +45,7 @@ class MCTS(MonteCarlo):
         self.timeout = settings.pop('timeout', math.inf)
         self.exploration = settings.pop('exploration', 0.35)
         self.cache_opponent_moves = settings.pop('cache_opponent_moves', False)
+        self.use_obj_rand = settings.pop('obj_rand', False)
         if settings:
             raise TypeError("MCTS got unexpected parameters " + ", ".join(f"'{arg}'" for arg in settings))
         if mapstate is not None: self.setMapState(mapstate)
@@ -83,8 +85,8 @@ class MCTS(MonteCarlo):
             """
 
             if node.player_number == self.player:
-                node.player_moves   = [rand_move(node.state, player)   for _ in range(n)]
-                node.opponent_moves = [rand_move(node.state, opponent) for _ in range(n)]
+                node.player_moves   = [rand_obj(node.state, player, opponent) if self.use_obj_rand else rand_move(node.state, player)   for _ in range(n)]
+                node.opponent_moves = [rand_obj(node.state, opponent, player) if self.use_obj_rand else rand_move(node.state, opponent) for _ in range(n)]
 
                 for move in node.player_moves:
                     child = Node(node.state.copy())
@@ -112,7 +114,7 @@ class MCTS(MonteCarlo):
                 # if unapplied moves is None
                 # we want to generate the possible moves for both players
                 # if it is not, then just pass down the possible moves
-                move = rand_move(node.state, player)
+                move = rand_obj(node.state, player, opponent) if self.use_obj_rand else rand_move(node.state, player)
                 if node.unapplied_moves is None:
                     child = Node(node.state.copy())
                     child.unapplied_moves = move
@@ -248,7 +250,7 @@ class Random(MCTS):
         assert mapstate.winner() is None
         self.setMapState(mapstate)
         start = time()
-        move = rand_move(mapstate, self.player)
+        move = rand_obj(mapstate, self.player, self.opponent) if self.use_obj_rand else rand_move(mapstate, self.player)
         self.elapsed = time() - start
         return move
 
