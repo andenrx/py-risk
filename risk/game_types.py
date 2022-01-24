@@ -139,6 +139,7 @@ class MapState:
         assert (self.armies >= 0).all()
         assert len(self.armies) == len(self.owner) == len(self.mapstruct)
 
+    @lru_cache(4)
     def income(self, player):
         n = 5
         for bonus in self.mapstruct.bonuses:
