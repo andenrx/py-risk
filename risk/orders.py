@@ -187,3 +187,24 @@ class OrderList(list, Order):
         assert len(result) == len(self) + len(other)
         return result
 
+    def embedding(self, mapstate, player):
+        N = len(mapstate)
+        edges = mapstate.mapstruct.edgeLabels()
+        armies = mapstate.armies * (mapstate.owner == player)
+        data = np.zeros(len(edges), dtype=int)
+        self.assertvalid(mapstate)
+        for order in self:
+            assert order.player == player
+            if isinstance(order, AttackTransferOrder):
+                assert mapstate.owner[order.src] == order.player
+                armies[order.src] -= order.armies
+                data[edges[order.src, order.dst]] += order.armies
+            elif isinstance(order, DeployOrder):
+                assert mapstate.owner[order.target] == order.player
+                armies[order.target] += order.armies
+            else: assert False
+        assert (armies >= 0).all()
+        data[:N] += armies
+        assert (data >= 0).all()
+        return data / np.linalg.norm(data)
+

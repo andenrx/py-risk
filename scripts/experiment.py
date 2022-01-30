@@ -22,6 +22,7 @@ default_player_args = {
     "cache-opponent-moves": False,
     "use-mcts": True,
     "obj-rand": False,
+    "alpha": float("inf"),
 }
 
 def run(args):

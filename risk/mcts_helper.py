@@ -46,6 +46,8 @@ class MCTS(MonteCarlo):
         self.exploration = settings.pop('exploration', 0.35)
         self.cache_opponent_moves = settings.pop('cache_opponent_moves', False)
         self.use_obj_rand = settings.pop('obj_rand', False)
+        self.alpha = settings.pop('alpha', np.inf)
+        self.NodeType = Node if self.alpha == np.inf else lambda mapstate: RaveNode(mapstate, alpha=self.alpha)
         if settings:
             raise TypeError("MCTS got unexpected parameters " + ", ".join(f"'{arg}'" for arg in settings))
         if mapstate is not None: self.setMapState(mapstate)
@@ -61,7 +63,7 @@ class MCTS(MonteCarlo):
         return self.make_choice().move
 
     def setMapState(self, mapstate):
-        self.root_node = Node(mapstate)
+        self.root_node = self.NodeType(mapstate)
         self.root_node.depth = 0
         self.root_node.player_number = self.player
         self.root_node.opponent_number = self.opponent
@@ -89,7 +91,7 @@ class MCTS(MonteCarlo):
                 node.opponent_moves = [rand_obj(node.state, opponent, player) if self.use_obj_rand else rand_move(node.state, opponent) for _ in range(n)]
 
                 for move in node.player_moves:
-                    child = Node(node.state.copy())
+                    child = self.NodeType(node.state.copy())
                     child.move = move
                     child.player_number = opponent
                     child.opponent_number = player
@@ -101,7 +103,7 @@ class MCTS(MonteCarlo):
                 assert node.parent is not None
                 for move in node.parent.opponent_moves:
                     combined_move = move.combine(node.move)
-                    child = Node(combined_move(node.state))
+                    child = self.NodeType(combined_move(node.state))
                     child.move = move
                     child.player_number = opponent
                     child.opponent_number = player
@@ -116,11 +118,11 @@ class MCTS(MonteCarlo):
                 # if it is not, then just pass down the possible moves
                 move = rand_obj(node.state, player, opponent) if self.use_obj_rand else rand_move(node.state, player)
                 if node.unapplied_moves is None:
-                    child = Node(node.state.copy())
+                    child = self.NodeType(node.state.copy())
                     child.unapplied_moves = move
                 else:
-                    move = move.combine(node.unapplied_moves)
-                    child = Node(move(node.state))
+                    combined_move = move.combine(node.unapplied_moves)
+                    child = self.NodeType(combined_move(node.state))
                     child.unapplied_moves = None
                 child.move = move
                 child.player_number = opponent
@@ -240,9 +242,10 @@ class Random(MCTS):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.elapsed = 0
+        self.setMapState(None)
 
     def setMapState(self, mapstate):
-        self.root_node = Node(mapstate)
+        self.root_node = self.NodeType(mapstate)
         self.root_node.win_value = 0
         self.root_node.visits = 1
 
@@ -253,4 +256,49 @@ class Random(MCTS):
         move = rand_obj(mapstate, self.player, self.opponent) if self.use_obj_rand else rand_move(mapstate, self.player)
         self.elapsed = time() - start
         return move
+
+class RaveNode(Node):
+    def __init__(self, *args, alpha=np.inf, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.alpha = alpha
+        self.embeddings_calculated = False
+
+    def add_child(self, child):
+        child.index = len(self.children)
+        super().add_child(child)
+        self.embeddings_calculated = False
+
+    def calculate_embeddings(self):
+        self.embeddings_calculated = True
+        self.embeddings = np.array([
+            child.move.embedding(self.state, self.player_number)
+            for child in self.children
+        ])
+        assert (self.embeddings <= 1).all()
+        self.embeddings_pre_calculated = self.embeddings @ self.embeddings.T
+        with np.errstate(divide='ignore'):
+            # np.log(0) returns -inf which is what we want
+            self.embeddings_pre_calculated = self.alpha * np.log(self.embeddings_pre_calculated)
+        self.embeddings_pre_calculated = np.minimum(self.embeddings_pre_calculated, 0)
+        self.embeddings_pre_calculated[range(len(self.children)), range(len(self.children))] = 0
+
+    def get_score(self, root_node):
+        if not self.parent.embeddings_calculated:
+            self.parent.calculate_embeddings()
+
+        vec = (self.parent.visits+1) ** self.parent.embeddings_pre_calculated[self.index]
+
+        assert (vec <= 1).all()
+        assert (vec == 1).any()
+
+        # This can be more efficient
+        visits = vec @ np.array([child.visits for child in self.parent.children])
+        win_value = vec @ np.array([child.win_value for child in self.parent.children])
+
+        discovery_operand = self.discovery_factor * (self.policy_value or 1) * math.sqrt(math.log(self.parent.visits) / max(visits, 1))
+        win_multiplier = 1 if self.parent.player_number == root_node.player_number else -1
+        win_operand = win_multiplier * win_value / (visits or 1)
+        self.score = win_operand + discovery_operand
+
+        return self.score
 

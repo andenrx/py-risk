@@ -50,6 +50,16 @@ class MapStructure:
         )
 
     @lru_cache(1)
+    def edgeLabels(self):
+        n = len(self)
+        e = len(self.graph.es)
+        edges = {(terr, terr): terr for terr in range(n)}
+        for edge in self.graph.es:
+            edges[(edge.source, edge.target)] = edge.index + n
+            edges[(edge.target, edge.source)] = edge.index + n + e
+        return edges
+
+    @lru_cache(1)
     def bonusTensor(self):
         return torch.tensor(
             np.array([
