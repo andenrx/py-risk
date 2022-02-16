@@ -158,6 +158,12 @@ class OrderList(list, Order):
     def from_json(data):
         return OrderList([Order.from_json(entry) for entry in data])
 
+    def __or__(self, other):
+        return self.combine(other)
+
+    def __ror__(self, other):
+        return self | other
+
     def combine(self, other):
         i = j = 0
         next_player = np.random.randint(2)
