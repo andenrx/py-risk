@@ -49,7 +49,7 @@ def __main__(args):
         "winner": None
     }
 
-    bot = (risk.MCTS if args.use_mcts else risk.Random)(
+    bot = args.model_type(
             None,
             p1,
             p2,
@@ -94,8 +94,8 @@ if __name__ == "__main__":
     parser.add_argument("--time-limit", type=float, default=float("inf"), help="")
     parser.add_argument("--exploration", type=float, default=0.35, help="")
     parser.add_argument("--cache-opponent-moves", type=strtobool, default=False, help="")
-    parser.add_argument("--use-mcts", type=strtobool, default=True, help="")
     parser.add_argument("--obj-rand", type=strtobool, default=False, help="")
     parser.add_argument("--alpha", type=float, default="inf", help="")
+    parser.add_argument("--model-type", type=risk.mcts_helper.model_builder, default="MCTS", help="")
     __main__(parser.parse_args())
 

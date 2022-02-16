@@ -31,7 +31,7 @@ def __main__(args):
         "winner": None
     }
 
-    bot1 = (risk.MCTS if args.use_mcts_1 else risk.Random)(
+    bot1 = args.model_type_1(
             None, 1, 2, model1,
             iters=args.iter_1,
             max_depth=args.max_depth_1,
@@ -43,7 +43,7 @@ def __main__(args):
             obj_rand=args.obj_rand_1,
             alpha=args.alpha_1,
     )
-    bot2 = (risk.MCTS if args.use_mcts_2 else risk.Random)(
+    bot2 = args.model_type_2(
             None, 2, 1, model2,
             iters=args.iter_2,
             max_depth=args.max_depth_2,
@@ -94,11 +94,11 @@ if __name__ == "__main__":
     parser.add_argument("--exploration-2", type=float, default=0.35, help="")
     parser.add_argument("--cache-opponent-moves-1", type=strtobool, default=False, help="")
     parser.add_argument("--cache-opponent-moves-2", type=strtobool, default=False, help="")
-    parser.add_argument("--use-mcts-1", type=strtobool, default=True, help="")
-    parser.add_argument("--use-mcts-2", type=strtobool, default=True, help="")
     parser.add_argument("--obj-rand-1", type=strtobool, default=False, help="")
     parser.add_argument("--obj-rand-2", type=strtobool, default=False, help="")
     parser.add_argument("--alpha-1", type=float, default="inf", help="")
     parser.add_argument("--alpha-2", type=float, default="inf", help="")
+    parser.add_argument("--model-type-1", type=risk.mcts_helper.model_builder, default="MCTS", help="")
+    parser.add_argument("--model-type-2", type=risk.mcts_helper.model_builder, default="MCTS", help="")
     __main__(parser.parse_args())
 

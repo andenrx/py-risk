@@ -6,6 +6,19 @@ from .data_loader import *
 from time import time
 import math
 
+def model_builder(model_type):
+    types = {
+        "MCTS": MCTS,
+        "Random": Random,
+        "Genetic": Genetic,
+    }
+    if model_type in types:
+        return types[model_type]
+    else:
+        raise Exception(
+                f"Invalid model type '{model_type}'. Allowed types are: "
+               + ", ".join(f"'{model_name}'" for model_name in types))
+
 class MCTS(MonteCarlo):
     def __init__(self, mapstate, p1: int, p2: int, model=None, **settings):
         """Monte Carlo Agent with or without a Model
