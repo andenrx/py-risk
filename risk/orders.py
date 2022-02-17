@@ -214,3 +214,14 @@ class OrderList(list, Order):
         assert (data >= 0).all()
         return data / np.linalg.norm(data)
 
+    def from_gene(data, mapstruct, player):
+        edges = mapstruct.edgeLabels()
+        orders = []
+        for (src, dst), index in edges.items():
+            if data[index] > 0:
+                if src == dst:
+                    orders.append(DeployOrder(player, src, data[index]))
+                else:
+                    orders.append(AttackTransferOrder(player, src, dst, data[index]))
+        return OrderList(orders)
+

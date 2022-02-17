@@ -3,6 +3,8 @@ from montecarlo.node import Node
 from .rand import rand_move
 from .objectives import rand_obj
 from .data_loader import *
+from .pygad import create
+from .orders import OrderList
 from time import time
 import math
 
@@ -61,6 +63,7 @@ class MCTS(MonteCarlo):
         self.use_obj_rand = settings.pop('obj_rand', False)
         self.alpha = settings.pop('alpha', np.inf)
         self.NodeType = Node if self.alpha == np.inf else lambda mapstate: RaveNode(mapstate, alpha=self.alpha)
+        settings.pop('pop_size', None)
         if settings:
             raise TypeError("MCTS got unexpected parameters " + ", ".join(f"'{arg}'" for arg in settings))
         if mapstate is not None: self.setMapState(mapstate)
@@ -314,4 +317,27 @@ class RaveNode(Node):
         self.score = win_operand + discovery_operand
 
         return self.score
+
+class Genetic(MCTS):
+    def __init__(self, *args, **settings):
+        self.pop_size = settings.pop('pop_size', 50)
+        super().__init__(*args, **settings)
+        self.elapsed = 0
+        self.setMapState(None)
+
+    def setMapState(self, mapstate):
+        self.root_node = self.NodeType(mapstate)
+        self.root_node.win_value = 0
+        self.root_node.visits = 0
+
+    def play(self, mapstate):
+        assert mapstate.winner() is None
+        self.setMapState(mapstate)
+        ga = create(mapstate, iterations=self.iters, pop_size=self.pop_size, p1=self.player, p2=self.opponent, model=self.model)
+        start = time()
+        ga.run()
+        self.elapsed = time() - start
+        self.root_node.win_value += ga.last_generation_fitness[0].sum()
+        self.root_node.visits += ga.population.shape[1]
+        return OrderList.from_gene(ga.population[0, ga.last_generation_fitness[0].argmax()], mapstate.mapstruct, self.player)
 

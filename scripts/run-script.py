@@ -63,6 +63,7 @@ def __main__(args):
             cache_opponent_moves=args.cache_opponent_moves,
             obj_rand=args.obj_rand,
             alpha=args.alpha,
+            pop_size=args.pop_size,
     )
     game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame)
     result = game.play_loop(
@@ -97,5 +98,6 @@ if __name__ == "__main__":
     parser.add_argument("--obj-rand", type=strtobool, default=False, help="")
     parser.add_argument("--alpha", type=float, default="inf", help="")
     parser.add_argument("--model-type", type=risk.mcts_helper.model_builder, default="MCTS", help="")
+    parser.add_argument("--pop-size", type=int, default=50, help="")
     __main__(parser.parse_args())
 

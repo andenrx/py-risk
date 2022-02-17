@@ -23,6 +23,7 @@ default_player_args = {
     "obj-rand": False,
     "alpha": float("inf"),
     "model-type": "MCTS",
+    "pop-size": 50,
 }
 
 def run(args):

@@ -42,6 +42,7 @@ def __main__(args):
             cache_opponent_moves=args.cache_opponent_moves_1,
             obj_rand=args.obj_rand_1,
             alpha=args.alpha_1,
+            pop_size=args.pop_size_1,
     )
     bot2 = args.model_type_2(
             None, 2, 1, model2,
@@ -54,6 +55,7 @@ def __main__(args):
             cache_opponent_moves=args.cache_opponent_moves_2,
             obj_rand=args.obj_rand_2,
             alpha=args.alpha_2,
+            pop_size=args.pop_size_2,
     )
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
@@ -100,5 +102,7 @@ if __name__ == "__main__":
     parser.add_argument("--alpha-2", type=float, default="inf", help="")
     parser.add_argument("--model-type-1", type=risk.mcts_helper.model_builder, default="MCTS", help="")
     parser.add_argument("--model-type-2", type=risk.mcts_helper.model_builder, default="MCTS", help="")
+    parser.add_argument("--pop-size-1", type=int, default=50, help="")
+    parser.add_argument("--pop-size-2", type=int, default=50, help="")
     __main__(parser.parse_args())
 
