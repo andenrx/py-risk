@@ -214,6 +214,18 @@ class OrderList(list, Order):
         assert (data >= 0).all()
         return data / np.linalg.norm(data)
 
+    def to_gene(self, mapstruct):
+        edges = mapstruct.edgeLabels()
+        data = np.zeros(len(edges), dtype=int)
+        for order in self:
+            if isinstance(order, AttackTransferOrder):
+                data[edges[order.src, order.dst]] += order.armies
+            elif isinstance(order, DeployOrder):
+                data[edges[order.target, order.target]] += order.armies
+            else: assert False
+        assert (data >= 0).all()
+        return data
+
     def from_gene(data, mapstruct, player):
         edges = mapstruct.edgeLabels()
         orders = []
