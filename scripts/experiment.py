@@ -6,6 +6,7 @@ import os
 import math
 import random
 import pandas as pd
+from risk.mcts_helper import model_builder
 try:
     from risk.nn import *
 except ImportError:
@@ -37,11 +38,13 @@ def run(args):
 
         player_settings = default_player_args.copy()
         player_settings.update(config.pop("player 1"))
+        player_settings["model-type"] = model_builder(player_settings["model-type"])
         for key, value in player_settings.items():
             config[key + "-1"] = value
 
         player_settings = default_player_args.copy()
         player_settings.update(config.pop("player 2"))
+        player_settings["model-type"] = model_builder(player_settings["model-type"])
         for key, value in player_settings.items():
             config[key + "-2"] = value
     else:
