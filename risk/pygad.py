@@ -98,9 +98,11 @@ def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rou
                 for src in range(len(mapstate)):
                     deployment = d[edges[src, src]]
                     available = mapstate.armies[src] + deployment
-                    while (over_by := d[attacks_from[src]].sum()) > available:
+                    over_by = d[attacks_from[src]].sum()
+                    while over_by > available:
                         k = np.random.choice(np.where(attacks_from[src])[0])
                         d[k] -= min(d[k], over_by)
+                        over_by = d[attacks_from[src]].sum()
             assert (off[:, :len(mapstate)].sum(1) == mapstate.income(player)).all()
         return offspring
 
