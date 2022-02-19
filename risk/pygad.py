@@ -4,6 +4,12 @@ from risk.rand import rand_move
 import pygad
 import numpy as np
 
+try:
+    import torch
+    from torch_geometric.loader import DataLoader
+except ImportError:
+    pass
+
 def playout(mapstate, p1, p2, max_iter=100):
     for i in range(max_iter):
         if mapstate.winner() is not None:
@@ -14,9 +20,6 @@ def playout(mapstate, p1, p2, max_iter=100):
     return 0, max_iter
 
 def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rounds=5):
-    import torch
-    from torch_geometric.loader import DataLoader
-
     mapstruct = mapstate.mapstruct
 
     table = np.zeros((pop_size, pop_size))
