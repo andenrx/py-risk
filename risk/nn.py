@@ -957,5 +957,151 @@ class Model15(torch.nn.Module):
 
       return x, pi
 
+import torch_geometric
+import torch_sparse
+import torch
+import torch.nn.functional as F
+from torch.nn import Dropout, Identity, MultiheadAttention, Sequential
+from torch.nn import ReLU, LeakyReLU
+from torch_geometric.nn import GCNConv, Linear, GatedGraphConv, GATConv
+from torch_geometric.nn import GATv2Conv, TransformerConv, GlobalAttention
+from torch_geometric.nn import SAGEConv, ResGatedGraphConv, GraphNorm, BatchNorm
+from torch_geometric.nn import global_max_pool, global_add_pool, global_mean_pool
+from torch_geometric.nn import JumpingKnowledge
+
+class Model18(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        UNITS = 30
+        DROPOUT = 0.25
+        self.init = Linear(5+2, UNITS)
+        self.g1 = TransformerConv(UNITS, UNITS, dropout=DROPOUT, beta=True)
+        self.g2 = TransformerConv(UNITS, UNITS, dropout=DROPOUT, beta=True)
+        self.g3 = TransformerConv(2*UNITS, UNITS, dropout=DROPOUT, beta=True)
+        self.b1 = TransformerConv(UNITS, UNITS, dropout=DROPOUT, beta=True)
+        self.final1 = Linear(UNITS, UNITS)
+        self.final2 = Linear(UNITS, 1)
+
+    def forward(self, data):
+      # income_repeated = torch.repeat_interleave(data.income, data.num_nodes, dim=0)
+      income_repeated = data.income[data.batch]
+      x = torch.cat([data.graph_features, income_repeated], dim=1)
+      x = F.relu(self.init(x))
+      x = F.relu(self.g1(x, data.graph_edges))
+      x = F.relu(self.g2(x, data.graph_edges))
+      b = x[data.bonus_nodes]
+      b = F.relu(self.b1(b, data.bonus_edges))
+      b = global_add_pool(b, data.bonus_batch)
+      b = torch_sparse.spmm(data.bonus_mapping, data.bonus_values_normed[data.bonus_mapping[1]], data.num_nodes, data.num_bonuses.sum(), b)
+      x = torch.cat([x, b], dim=1)
+      x = F.relu(self.g3(x, data.graph_edges))
+      x = F.relu(self.final1(x))
+      v = global_mean_pool(x, data.batch)
+      v = self.final2(v).view(-1)
+      return torch.tanh(v)
+
+    def prep(self, state, state_value=None, move=None, move_value=None, visits=None, p1=1, p2=2):
+      assert state.winner() is not None or (state.owner == p1).any() and (state.owner == p2).any()
+      edges = state.mapstruct.edgeTensor()
+      mask, nodes, values, b_edges = bonus_tensors(state.mapstruct)
+      z = torch.zeros(values.size(), dtype=torch.long)
+      z.index_add_(0, mask, torch.ones(mask.size(), dtype=torch.long))
+      assert torch_geometric.utils.is_undirected(edges)
+      assert torch_geometric.utils.is_undirected(b_edges)
+      i1, i2 = state.income(p1), state.income(p2)
+      graph_features = to_tensor(state, p1, p2)
+      return StateData(
+        map=int(state.mapstruct.id),
+        graph_features=graph_features,
+        graph_edges=edges,
+        bonus_edges=b_edges,
+        bonus_batch=mask,
+        bonus_nodes=nodes,
+        bonus_values=values,
+        bonus_values_normed=values / z,
+        bonus_mapping=get_bonus_mapping(state.mapstruct),
+        income=torch.tensor([i1, i2]).view(1,-1),
+        total_armies=graph_features[:,2:].sum(dim=0).view(1,-1),
+        num_nodes=len(graph_features),
+        num_bonuses=len(values),
+        state=state,
+        state_value=state_value,
+        move=move,
+        move_value=move_value,
+        visits=visits,
+        #move_embedding=move_embedding(mapstruct, move),
+      )
+from functools import lru_cache
+from itertools import product
+
+@lru_cache(32)
+def get_mapstruct(id):
+  gameid = api.createGame([1,2], botgame=True, mapid=id)
+  return api.getMapStructure(gameid, botgame=True)
+
+@lru_cache(32)
+def get_bonus_mapping(mapstruct):
+  a = []
+  for i, bonus in enumerate(mapstruct.bonuses):
+    for j in bonus.terr:
+      a.append([j, i])
+  a = torch.tensor(a).T
+  return a
+
+def to_tensor(self, p1, p2):
+    graph_features = torch.tensor(np.array([
+        self.owner == p1,
+        self.owner == p2,
+        self.armies * (self.owner == p1),
+        self.armies * (self.owner == p2),
+        self.armies * (self.owner == 0),
+    ]), dtype=torch.float).T
+    return graph_features
+
+@lru_cache(32)
+def bonus_tensors(mapstruct):
+  mask = []
+  nodes = []
+  values = []
+  edges = []
+
+  for i, bonus in enumerate(mapstruct.bonuses):
+    edges += list(product(range(len(nodes), len(nodes) + len(bonus.terr)), range(len(nodes), len(nodes) + len(bonus.terr))))
+    nodes += list(bonus.terr)
+    mask += [i] * len(bonus.terr)
+    values.append(bonus.value)
+  return torch.tensor(mask, dtype=torch.long), torch.tensor(nodes, dtype=torch.long), torch.tensor(values, dtype=torch.float), torch.tensor(edges, dtype=torch.long).T
+
+def first(x):
+  return next(iter(x))
+import numpy as np
+
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
+
+class StateData(Data):
+  def __inc__(self, key, value, *args, **kwargs):
+    if key == 'graph_edges':
+      return self.num_nodes
+    elif key == 'bonus_edges':
+      return len(self.bonus_nodes)
+    elif key == 'bonus_batch':
+      return self.num_bonuses
+    elif key == 'bonus_nodes':
+      return self.num_nodes
+    elif key == 'bonus_mapping':
+      return torch.tensor([[self.num_nodes], [self.num_bonuses]])
+    elif "btch" in key:
+      return self.num_moves
+    elif "src" in key or "dst" in key or "tgt" in key:
+      return self.num_nodes
+    else:
+      return 0
+
+  def __cat_dim__(self, key, value, *args, **kwargs):
+    if 'edges' in key or 'mapping' in key:# or key == 'move_embedding':
+      return 1
+    else:
+      return 0
 
 
