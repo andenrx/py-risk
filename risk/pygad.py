@@ -1,8 +1,12 @@
 import risk
 from risk.orders import *
 from risk.rand import rand_move
-import pygad
 import numpy as np
+
+try:
+    import pygad
+except ImportError:
+    pass
 
 try:
     import torch
