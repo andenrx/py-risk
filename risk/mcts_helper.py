@@ -333,7 +333,7 @@ class Genetic(MCTS):
     def play(self, mapstate):
         assert mapstate.winner() is None
         self.setMapState(mapstate)
-        ga = create(mapstate, iterations=self.iters, pop_size=self.pop_size, p1=self.player, p2=self.opponent, model=self.model)
+        ga = create(mapstate, iterations=self.iters, pop_size=self.pop_size, p1=self.player, p2=self.opponent, model=self.model, timeout=self.timeout)
         start = time()
         ga.run()
         self.elapsed = time() - start

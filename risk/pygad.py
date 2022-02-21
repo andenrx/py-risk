@@ -1,6 +1,7 @@
 import risk
 from risk.orders import *
 from risk.rand import rand_move
+from time import time
 import numpy as np
 
 try:
@@ -23,7 +24,7 @@ def playout(mapstate, p1, p2, max_iter=100):
         mapstate = (m1 | m2)(mapstate)
     return 0, max_iter
 
-def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rounds=5):
+def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rounds=5, timeout=np.inf):
     mapstruct = mapstate.mapstruct
 
     table = np.zeros((pop_size, pop_size))
@@ -115,6 +116,8 @@ def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rou
 
     def mark_table_as_invalid(ga):
         table_ready[0] = False
+        if time() - ga.start_time >= timeout:
+            return "stop"
 
     ga = pygad.GA(
         num_generations=iterations,
@@ -139,5 +142,6 @@ def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rou
         cache_fitness=False,
     )
     ga.table = table
+    ga.start_time = time()
     return ga
 
