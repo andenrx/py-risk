@@ -3,11 +3,7 @@ from risk.orders import *
 from risk.rand import rand_move
 from time import time
 import numpy as np
-
-try:
-    import pygad
-except ImportError:
-    pass
+import pygad
 
 try:
     import torch

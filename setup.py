@@ -14,6 +14,9 @@ setup(
        "python-igraph",
        "imparaai-montecarlo",
        "wonderwords",
+       "pyyaml",
+       "pygad @ https://github.com/andenrx/GeneticAlgorithmPython/archive/master.zip",
+       "scipy", # only for objectives.py
     ],
     extras_require={
         "nn": [
@@ -23,10 +26,4 @@ setup(
             "torch-geometric",
         ]
     },
-    dependency_links=[
-        "https://github.com/ImparaAI/monte-carlo-tree-search/archive/refs/tags/v1.3.1.tar.gz",
-        "https://github.com/andenrx/GeneticAlgorithmPython",
-        "https://data.pyg.org/whl/torch-1.9.0+cu111.html",
-        "https://data.pyg.org/whl/torch-1.9.0+cu111.html",
-    ],
 )
