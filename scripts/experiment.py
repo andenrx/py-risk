@@ -52,6 +52,7 @@ def run(args):
 
         player_settings = default_player_args.copy()
         player_settings.update(config.pop("player 1"))
+        player_settings["model-type"] = model_builder(player_settings["model-type"])
         for key, value in player_settings.items():
             config[key] = value
         if config.pop("player 2") != "default":
