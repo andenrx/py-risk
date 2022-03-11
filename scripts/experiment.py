@@ -61,6 +61,7 @@ def run(args):
 
     config["map-cache"] = args.map_cache
     config["output-dir"] = args.dir
+    config.setdefault("surrender-thresh", 0.0)
     maps = config["map"]
 
     config = { key.replace("-", "_"): value for key, value in config.items() }

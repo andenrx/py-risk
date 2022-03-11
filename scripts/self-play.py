@@ -59,14 +59,15 @@ def __main__(args):
     )
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
+    callbacks = [risk.standard_callback]
+    if args.output_dir:
+        callbacks.append(risk.record_data_callback(data))
+    if args.surrender_thresh > 0:
+        callbacks.append(risk.early_terminate_callback(args.surrender_thresh))
     result = game.play_loop(
         bot1,
         bot2,
-        callback=(
-            risk.compose_callbacks(risk.standard_callback, risk.record_data_callback(data))
-            if args.output_dir else
-            risk.standard_callback
-        )
+        callback=risk.compose_callbacks(*callbacks),
     )
 
     data["winner"] = result
@@ -78,6 +79,7 @@ def __main__(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play game")
     parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in risk.api.MapID], help="The map to play on")
+    parser.add_argument("--surrender-thresh", type=float, default=0.0, help="Terminate early if a player has this probability of winning")
     parser.add_argument("--iter-1", type=int, default=100, help="Number of iterations to run per turn for player 1")
     parser.add_argument("--iter-2", type=int, default=100, help="Number of iterations to run per turn for player 2")
     parser.add_argument("--output-dir", type=str, default=None, help="Directory to store run data in")

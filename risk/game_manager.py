@@ -48,7 +48,9 @@ class GameManager:
             old_info = info
             info = self.gameInfo()
             if callback and old_info.turn < info.turn:
-                callback(bots, mapstate, old_info.turn)
+                winner = callback(bots, mapstate, old_info.turn)
+                if winner is not None:
+                    return winner
         return info.winner
 
 class RemoteGameManager(GameManager):

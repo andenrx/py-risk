@@ -78,6 +78,10 @@ class MCTS(MonteCarlo):
     def get_move(self):
         return self.make_choice().move
 
+    def win_prob(self):
+        value = self.root_node.win_value / self.root_node.visits
+        return (1 + value) / 2
+
     def setMapState(self, mapstate):
         self.root_node = self.NodeType(mapstate)
         self.root_node.depth = 0

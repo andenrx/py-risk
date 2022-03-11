@@ -1,7 +1,10 @@
 def compose_callbacks(*cbs):
     def func(*args, **kwargs):
+        result = None
         for cb in cbs:
-            cb(*args, **kwargs)
+            cb_result = cb(*args, **kwargs)
+            result = cb_result if result is None else result
+        return result
     return func
 
 def standard_callback(bots, mapstate, turn):
@@ -23,5 +26,24 @@ def record_data_callback(data):
             "move_probs": [[child.visits / bot.root_node.visits for child in bot.root_node.children] for bot in bots],
             "time": [bot.elapsed for bot in bots],
         })
+    return callback
+
+def early_terminate_callback(threshold):
+    def callback(bots, mapstate, turn):
+        early_winner = None
+        for bot in bots:
+            p = bot.win_prob()
+            if p > 1 - threshold:
+                # this bot thinks it will win
+                early_winner = bot.player
+            elif p > threshold:
+                # this bot thinks the winner is still unknown
+                return None
+            else:
+                # this bot will not challenge the early_winner
+                pass
+        if early_winner is not None:
+            print(f"All players have agreed that Player {early_winner} will win with {100-threshold*100:.2f}% confidence")
+        return early_winner
     return callback
 
