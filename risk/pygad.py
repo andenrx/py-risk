@@ -20,7 +20,7 @@ def playout(mapstate, p1, p2, max_iter=100):
         mapstate = (m1 | m2)(mapstate)
     return 0, max_iter
 
-def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rounds=5, timeout=np.inf):
+def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rounds=5, timeout=np.inf, mutation_rate=0.04):
     mapstruct = mapstate.mapstruct
 
     table = np.zeros((pop_size, pop_size))
@@ -130,7 +130,7 @@ def create(mapstate, p1, p2, model, iterations=5, pop_size=10, max_iter=100, rou
         on_mutation=on_mutation,
         mutation_by_replacement=False,
         mutation_type="random",
-        mutation_probability=0.04,
+        mutation_probability=mutation_rate,
         crossover_type="single_point", # TODO: Restructure gene so that crossover keeps same src together
         random_mutation_min_val=-4,
         random_mutation_max_val=4,
