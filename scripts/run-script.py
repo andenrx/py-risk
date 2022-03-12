@@ -64,6 +64,7 @@ def __main__(args):
             obj_rand=args.obj_rand,
             alpha=args.alpha,
             pop_size=args.pop_size,
+            mirror_model=args.mirror_model,
     )
     game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame)
     result = game.play_loop(
@@ -99,5 +100,6 @@ if __name__ == "__main__":
     parser.add_argument("--alpha", type=float, default="inf", help="")
     parser.add_argument("--model-type", type=risk.mcts_helper.model_builder, default="MCTS", help="")
     parser.add_argument("--pop-size", type=int, default=50, help="")
+    parser.add_argument("--mirror-model", type=strtobool, default=False, help="")
     __main__(parser.parse_args())
 

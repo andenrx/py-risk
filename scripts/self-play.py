@@ -43,6 +43,7 @@ def __main__(args):
             obj_rand=args.obj_rand_1,
             alpha=args.alpha_1,
             pop_size=args.pop_size_1,
+            mirror_model=args.mirror_model_1,
     )
     bot2 = args.model_type_2(
             None, 2, 1, model2,
@@ -56,6 +57,7 @@ def __main__(args):
             obj_rand=args.obj_rand_2,
             alpha=args.alpha_2,
             pop_size=args.pop_size_2,
+            mirror_model=args.mirror_model_2,
     )
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
@@ -106,5 +108,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-type-2", type=risk.mcts_helper.model_builder, default="MCTS", help="")
     parser.add_argument("--pop-size-1", type=int, default=50, help="")
     parser.add_argument("--pop-size-2", type=int, default=50, help="")
+    parser.add_argument("--mirror-model-1", type=strtobool, default=False, help="")
+    parser.add_argument("--mirror-model-2", type=strtobool, default=False, help="")
     __main__(parser.parse_args())
 

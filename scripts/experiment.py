@@ -25,6 +25,7 @@ default_player_args = {
     "alpha": float("inf"),
     "model-type": "MCTS",
     "pop-size": 50,
+    "mirror-model": False,
 }
 
 def run(args):

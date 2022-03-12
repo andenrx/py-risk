@@ -64,6 +64,7 @@ class MCTS(MonteCarlo):
         self.alpha = settings.pop('alpha', np.inf)
         self.NodeType = Node if self.alpha == np.inf else lambda mapstate: RaveNode(mapstate, alpha=self.alpha)
         settings.pop('pop_size', None)
+        self.mirror_model = settings.pop('mirror_model', False)
         if settings:
             raise TypeError("MCTS got unexpected parameters " + ", ".join(f"'{arg}'" for arg in settings))
         if mapstate is not None: self.setMapState(mapstate)
@@ -152,6 +153,7 @@ class MCTS(MonteCarlo):
                 node.add_child(child)
 
         if self.model and self.model.predict_policy() and not self.model.batched():
+            assert not self.mirror_model
             v, pi = self.model(*node.state.to_tensor(player, opponent), [child.move for child in node.children])
             for prior, child in zip(pi.exp().tolist(), node.children):
                 child.update_policy_value(self.trust_policy * prior * len(node.children) + 1 - self.trust_policy)
@@ -174,6 +176,7 @@ class MCTS(MonteCarlo):
 
     def expand(self, node):
         if self.model is None or not self.model.batched():
+            assert not self.mirror_model
             return super().expand(node)
         node.expanded = True
         if not node.children:
@@ -190,6 +193,7 @@ class MCTS(MonteCarlo):
         if not children:
             node.expanded = False
             return
+        assert not self.mirror_model
         data = DataLoader([self.prep(child, child.player_number, child.opponent_number) for child in children], batch_size=100)
         assert data
 
@@ -346,6 +350,7 @@ class Genetic(MCTS):
             model=self.model,
             timeout=self.timeout,
             mutation_rate=self.exploration,
+            mirror_model=self.mirror_model,
         )
         start = time()
         ga.run()
