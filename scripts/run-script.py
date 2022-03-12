@@ -77,7 +77,7 @@ def __main__(args):
     )
 
     data["winner"] = result
-    print("Game complete:", "Win" if result else "Lose")
+    print("Game complete:", "Win" if result == p1 else "Lose")
     if args.output_dir:
         os.makedirs(args.output_dir, exist_ok=True)
         json.dump(data, open(f"{args.output_dir}/{dt.datetime.now()}.json", "w"))
