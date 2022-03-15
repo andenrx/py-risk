@@ -1,6 +1,7 @@
 import pickle
 import os
 import random
+import asyncio
 
 from . import api
 from .game_types import MapStructure
@@ -29,4 +30,11 @@ def weighted_choice(choices, weights):
         p -= weight
     else:
         assert False
+
+async def repeat_until_done(coro, func, delay=1):
+    task = asyncio.create_task(coro)
+    while not task.done():
+        func()
+        await asyncio.sleep(delay)
+    return task.result()
 

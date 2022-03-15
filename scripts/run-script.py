@@ -5,6 +5,7 @@ import pickle
 from time import sleep
 import os
 from distutils.util import strtobool
+import asyncio
 
 import risk
 try:
@@ -66,13 +67,19 @@ def __main__(args):
             pop_size=args.pop_size,
             mirror_model=args.mirror_model,
     )
-    game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame)
-    result = game.play_loop(
-        bot,
-        callback=(
-            risk.compose_callbacks(risk.standard_callback, risk.record_data_callback(data))
-            if args.output_dir else
-            risk.standard_callback
+    game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame, timeout=0.1 if botgame else 10.0)
+    result = asyncio.run(
+        risk.utils.repeat_until_done(
+            game.play_loop_async(
+                bot,
+                callback=(
+                    risk.compose_callbacks(risk.standard_callback, risk.record_data_callback(data))
+                    if args.output_dir else
+                    risk.standard_callback
+                )
+            ),
+            lambda: game.gameInfo(), # keep alive by calling GetGameInfo every 5 seconds
+            delay=5,
         )
     )
 

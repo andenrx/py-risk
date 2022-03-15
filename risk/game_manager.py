@@ -1,6 +1,7 @@
 from . import api
 from time import time, sleep
 from .utils import load_mapstruct
+import asyncio
 
 class GameInfo:
     def __init__(self, data):
@@ -36,15 +37,18 @@ class GameManager:
     def gameInfo(self): raise NotImplementedError()
 
     def play_loop(self, *bots, callback=None):
+        return asyncio.run(self.play_loop_async(*bots, callback=callback))
+
+    async def play_loop_async(self, *bots, callback=None):
         info = self.gameInfo()
         while not info.done:
             mapstate = self.getMapState()
             for bot in bots:
                 if not info.ready_for_player_to_make_move(bot.player):
                     continue
-                orders = bot.play(mapstate)
+                orders = await asyncio.to_thread(bot.play, mapstate)
                 self.sendOrders(orders, player=bot.player, turn=info.turn)
-            sleep(self.timeout)
+            await asyncio.sleep(self.timeout)
             old_info = info
             info = self.gameInfo()
             if callback and old_info.turn < info.turn:
@@ -54,8 +58,8 @@ class GameManager:
         return info.winner
 
 class RemoteGameManager(GameManager):
-    def __init__(self, gameid, p1, p2, botgame=False):
-        super().__init__()
+    def __init__(self, gameid, p1, p2, botgame=False, timeout=0.100):
+        super().__init__(timeout=timeout)
         self.gameid = gameid
         self.botgame = botgame
         self.mapstruct = api.getMapStructure(gameid, self.botgame)
