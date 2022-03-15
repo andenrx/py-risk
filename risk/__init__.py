@@ -4,3 +4,5 @@ from .mcts_helper import MCTS, Random
 from . import api
 from .game_manager import GameManager, RemoteGameManager, LocalGameManager
 from .callbacks import *
+from . import async_to_thread
+del async_to_thread
