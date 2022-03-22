@@ -34,6 +34,8 @@ def early_terminate_callback(threshold):
         for bot in bots:
             p = bot.win_prob()
             if p > 1 - threshold:
+                if early_winner is not None:
+                    return None # two players think they will win
                 # this bot thinks it will win
                 early_winner = bot.player
             elif p > threshold:
