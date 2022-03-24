@@ -1194,4 +1194,27 @@ class Model19(torch.nn.Module):
             state_value=state_value,
         )
 
+class LinearModel(torch.nn.Module):
+    def predict_policy(self): return False
+    def batched(self): return True
+
+    def __init__(self):
+        super().__init__()
+        self.layer = Linear(7, 1)
+
+    def forward(self, data):
+        x = data.graph_features
+        x_agg = global_mean_pool(x, data.batch)
+
+        agg = torch.cat([x_agg, data.income / 5], dim=1)
+        return torch.tanh(self.layer(agg)).view(-1)
+
+    def prep(self, *args, **kwargs):
+        return Model19.prep(self, *args, **kwargs)
+
+    def bonus_tensors(self, *args, **kwargs):
+        return Model19.bonus_tensors(self, *args, **kwargs)
+
+    def to_tensor(self, *args, **kwargs):
+        return Model19.to_tensor(self, *args, **kwargs)
 
