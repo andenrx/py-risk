@@ -85,6 +85,7 @@ def __main__(args):
     except Exception as ex:
         print(ex)
         data["error"] = repr(ex)
+        raise ex
     finally:
         if args.output_dir:
             os.makedirs(args.output_dir, exist_ok=True)
