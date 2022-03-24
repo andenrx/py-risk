@@ -1048,16 +1048,6 @@ def get_bonus_mapping(mapstruct):
   a = torch.tensor(a).T
   return a
 
-def to_tensor(self, p1, p2):
-    graph_features = torch.tensor(np.array([
-        self.owner == p1,
-        self.owner == p2,
-        self.armies * (self.owner == p1),
-        self.armies * (self.owner == p2),
-        self.armies * (self.owner == 0),
-    ]), dtype=torch.float).T
-    return graph_features
-
 @lru_cache(32)
 def bonus_tensors(mapstruct):
   mask = []
@@ -1119,6 +1109,9 @@ from torch_geometric.nn import global_max_pool, global_add_pool, global_mean_poo
 from torch_geometric.nn import JumpingKnowledge
 
 class Model19(torch.nn.Module):
+    def predict_policy(self): return False
+    def batched(self): return True
+
     def __init__(self):
         super().__init__()
         UNITS = 50
@@ -1170,13 +1163,23 @@ class Model19(torch.nn.Module):
             values.append(bonus.value)
         return torch.tensor(values), torch.tensor(batch)
 
-    def prep(self, state, state_value=None, p1=1, p2=2):
+    def to_tensor(_, self, p1, p2):
+        graph_features = torch.tensor(np.array([
+            self.owner == p1,
+            self.owner == p2,
+            self.armies * (self.owner == p1),
+            self.armies * (self.owner == p2),
+            self.armies * (self.owner == 0),
+        ]), dtype=torch.float).T
+        return graph_features
+
+    def prep(self, state, p1=1, p2=2, state_value=None):
         assert state.winner() is not None or (state.owner == p1).any() and (state.owner == p2).any()
         edges = state.mapstruct.edgeTensor()
         values, bonus_batch = self.bonus_tensors(state.mapstruct)
         assert torch_geometric.utils.is_undirected(edges)
         i1, i2 = state.income(p1), state.income(p2)
-        graph_features = to_tensor(state, p1, p2)
+        graph_features = self.to_tensor(state, p1, p2)
         return StateData(
             map=int(state.mapstruct.id),
             graph_features=graph_features,
