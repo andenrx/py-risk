@@ -68,26 +68,27 @@ def __main__(args):
             mirror_model=args.mirror_model,
     )
     game = risk.RemoteGameManager(gameid, p1, p2, botgame=botgame, timeout=0.1 if botgame else 10.0)
-    result = asyncio.run(
-        risk.utils.repeat_until_done(
-            game.play_loop_async(
-                bot,
-                callback=(
-                    risk.compose_callbacks(risk.standard_callback, risk.record_data_callback(data))
-                    if args.output_dir else
-                    risk.standard_callback
-                )
-            ),
-            lambda: game.gameInfo(), # keep alive by calling GetGameInfo every 5 seconds
-            delay=5,
-        )
-    )
 
-    data["winner"] = result
-    print("Game complete:", "Win" if result == p1 else "Lose")
+    callbacks = [risk.standard_callback]
     if args.output_dir:
-        os.makedirs(args.output_dir, exist_ok=True)
-        json.dump(data, open(f"{args.output_dir}/{dt.datetime.now()}.json", "w"))
+        callbacks.append(risk.record_data_callback(data))
+    try:
+        result = asyncio.run(
+            risk.utils.repeat_until_done(
+                game.play_loop_async(bot, callback=risk.compose_callbacks(*callbacks)),
+                lambda: game.gameInfo() if botgame else None, # keep alive by calling GetGameInfo every 5 seconds
+                delay=5,
+            )
+        )
+        print("Game complete:", "Win" if result == p1 else "Lose")
+        data["winner"] = result
+    except Exception as ex:
+        print(ex)
+        data["error"] = repr(ex)
+    finally:
+        if args.output_dir:
+            os.makedirs(args.output_dir, exist_ok=True)
+            json.dump(data, open(f"{args.output_dir}/{dt.datetime.now()}.json", "w"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play game")
