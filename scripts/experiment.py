@@ -72,7 +72,10 @@ def run(args):
             config["map"] = random.choice(maps)
         if args.games > 1:
             print(f"Round {i}")
-        play(DotDict(config))
+        try:
+            play(DotDict(config))
+        except ServerException as ex:
+            print(ex)
 
 class DotDict(dict):
     def __getattr__(self, attr):
