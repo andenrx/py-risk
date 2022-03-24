@@ -37,20 +37,20 @@ def run(args):
         if config["player 2"] == "default":
             raise Exception(f"'player 2: default' is not allowed for local runs")
 
-        player_settings = default_player_args.copy()
-        player_settings.update(config.pop("player 1"))
-        player_settings["model-type"] = model_builder(player_settings["model-type"])
-        for key, value in player_settings.items():
-            config[key + "-1"] = value
-
-        player_settings = default_player_args.copy()
-        player_settings.update(config.pop("player 2"))
-        player_settings["model-type"] = model_builder(player_settings["model-type"])
-        for key, value in player_settings.items():
-            config[key + "-2"] = value
+        for player_num in [1, 2]:
+            player_id = f"player {player_num}"
+            if isinstance(config[player_id], str):
+                config[player_id] = yaml.safe_load(open(f"{args.dir}/{config[player_id]}"))
+            player_settings = default_player_args.copy()
+            player_settings.update(config.pop(player_id))
+            player_settings["model-type"] = model_builder(player_settings["model-type"])
+            for key, value in player_settings.items():
+                config[f"{key}-{player_num}"] = value
     else:
         play = importlib.import_module("run-script").__main__
 
+        if isinstance(config["player 1"], str):
+            config["player 1"] = yaml.safe_load(open(f"{args.dir}/{config['player 1']}"))
         player_settings = default_player_args.copy()
         player_settings.update(config.pop("player 1"))
         player_settings["model-type"] = model_builder(player_settings["model-type"])
