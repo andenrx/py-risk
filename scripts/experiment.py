@@ -1,3 +1,4 @@
+import risk
 import importlib
 import argparse
 import yaml
@@ -74,7 +75,7 @@ def run(args):
             print(f"Round {i}")
         try:
             play(DotDict(config))
-        except ServerException as ex:
+        except risk.api.ServerException as ex:
             print(ex)
 
 class DotDict(dict):
