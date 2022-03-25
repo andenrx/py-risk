@@ -102,11 +102,6 @@ class MCTS(MonteCarlo):
         opponent = node.opponent_number
 
         if self.cache_opponent_moves:
-            assert self.model is None, "TODO"
-            """
-            Have model run on move creation
-            """
-
             if node.player_number == self.player:
                 node.player_moves   = [rand_obj(node.state, player, opponent) if self.use_obj_rand else rand_move(node.state, player)   for _ in range(n)]
                 node.opponent_moves = [rand_obj(node.state, opponent, player) if self.use_obj_rand else rand_move(node.state, opponent) for _ in range(n)]
