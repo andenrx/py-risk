@@ -72,16 +72,27 @@ def __main__(args):
     callbacks = [risk.standard_callback]
     if args.output_dir:
         callbacks.append(risk.record_data_callback(data))
+    if args.save_replay:
+        os.makedirs(f"{args.output_dir}/replays", exist_ok=True)
+        data["replay"] = f"replays/{gameid}.xml"
     try:
+        def ping():
+            if args.save_replay:
+                risk.api.saveReplay(gameid, f"{args.output_dir}/replays/{gameid}.xml")
+            elif botgame:
+                game.gameInfo()
+
         result = asyncio.run(
             risk.utils.repeat_until_done(
                 game.play_loop_async(bot, callback=risk.compose_callbacks(*callbacks)),
-                lambda: game.gameInfo() if botgame else None, # keep alive by calling GetGameInfo every 5 seconds
                 delay=5,
+                ping, # keep alive by calling GetGameInfo every 5 seconds
             )
         )
         print("Game complete:", "Win" if result == p1 else "Lose")
         data["winner"] = result
+        if args.save_replay:
+            risk.api.saveReplay(gameid, f"{args.output_dir}/replays/{gameid}.xml")
     except Exception as ex:
         print(ex)
         data["error"] = repr(ex)
@@ -98,6 +109,7 @@ if __name__ == "__main__":
     parser.add_argument("--resume", type=int, default=None, help="The game id to resume playing, default starts a new game")
     parser.add_argument("--iter", type=int, default=100, help="Number of iterations to run per turn")
     parser.add_argument("--output-dir", type=str, default=None, help="Directory to store run data in")
+    parser.add_argument("--save-replay", type=strtobool, default=False, help="")
     parser.add_argument("--model", type=str, default=None, help="")
     parser.add_argument("--max-depth", type=int, default=25, help="")
     parser.add_argument("--policy-trust", type=float, default=1.0, help="")

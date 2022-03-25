@@ -115,6 +115,13 @@ def sendOrders(gameid, mapstruct, orders, turn, playerid=633947, botgame=False):
     )
     return response
 
+def getReplay(gameid):
+    return call("ExportBotGame", {"gameID": gameid})["result"]
+
+def saveReplay(gameid, location):
+    xml = getReplay(gameid)
+    with open(location, "w") as file:
+        file.write(xml)
 
 # Set up requests to use exponential backoff
 adapter = requests.adapters.HTTPAdapter(
