@@ -194,25 +194,42 @@ class MCTS(MonteCarlo):
             node.expanded = False
             return
         assert not self.mirror_model
-        data = DataLoader([self.prep(child, child.player_number, child.opponent_number) for child in children], batch_size=100)
+        if self.model.predict_policy():
+            data = DataLoader([self.prep(child, child.player_number, child.opponent_number) for child in children], batch_size=100)
+        else:
+            data = DataLoader([self.model.prep(child.state, child.player_number, child.opponent_number) for child in children], batch_size=100)
         assert data
 
-        vs, pis = [], []
-        for batch in data:
-            v, pi = self.model(batch)
-            vs.append(v)
-            pis.append(pi)
-        assert vs
-        assert pis
-        vs = torch.cat(vs, dim=0)
-        pis = torch.cat(pis, dim=0)
+        if self.model.predict_policy():
+            vs, pis = [], []
+            for batch in data:
+                v, pi = self.model(batch)
+                vs.append(v)
+                pis.append(pi)
+            assert vs
+            assert pis
+            vs = torch.cat(vs, dim=0)
+            pis = torch.cat(pis, dim=0)
 
-        for v, pi, child in zip(vs, pis, children):
-            for prior, grandchild in zip(pi.exp().tolist(), child.children):
-                grandchild.update_policy_value(self.trust_policy * prior * len(child.children) + 1 - self.trust_policy)
-            child.update_win_value(
-                v.item() if child.player_number == self.player else -v.item()
-            )
+            for v, pi, child in zip(vs, pis, children):
+                for prior, grandchild in zip(pi.exp().tolist(), child.children):
+                    grandchild.update_policy_value(self.trust_policy * prior * len(child.children) + 1 - self.trust_policy)
+                child.update_win_value(
+                    v.item() if child.player_number == self.player else -v.item()
+                )
+        else:
+            vs = []
+            with torch.no_grad():
+                for batch in data:
+                    vs.append(self.model(batch))
+            assert vs
+            vs = torch.cat(vs, dim=0)
+
+            for v, child in zip(vs, children):
+                child.update_win_value(
+                    v.item() if child.player_number == self.player else -v.item()
+                )
+
 
     def prep(self, node, player, opponent):
         state, mapstruct = node.state, node.state.mapstruct
