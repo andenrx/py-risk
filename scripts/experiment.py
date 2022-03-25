@@ -62,6 +62,7 @@ def run(args):
         config["player"] = None
         config["resume"] = None
         config["ping"] = args.ping
+        config["save-replay"] = True
 
     config["map-cache"] = args.map_cache
     config["output-dir"] = args.dir
