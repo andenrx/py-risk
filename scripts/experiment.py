@@ -90,10 +90,14 @@ class DotDict(dict):
 def analyze(args):
     df = pd.DataFrame([], columns=["game", "pred", "result"])
     game_results = pd.DataFrame([], columns=["game", "won"])
+    fail_count = 0
     for i, file in enumerate(os.listdir(args.dir)):
         if not file.endswith(".json"):
             continue
         game_data = json.load(open(f"{args.dir}/{file}"))
+        if game_data["winner"] is None:
+            fail_count += 1
+            continue
         game_results = game_results.append({"game": i, "won": game_data["winner"] == 1}, ignore_index=True)
         for entry in game_data["turns"]:
             df = df.append(
@@ -115,7 +119,7 @@ def analyze(args):
     if game_results.empty:
         print("No results found")
     else:
-        print("Games:", len(game_results))
+        print("Games:", len(game_results), f"({fail_count} failed)")
         print(f"Win Percent:    {100 * game_results.won.mean():.2f}% ± {100 * 1.96 * 0.5 / math.sqrt(len(game_results)):.2f}%")
         actual_value = (df["result"]/2+0.5).sum()
         predicted_value = (df["pred"]/2+0.5).sum()
