@@ -87,7 +87,7 @@ def __main__(args):
             risk.utils.repeat_until_done(
                 game.play_loop_async(bot, callback=risk.compose_callbacks(*callbacks)),
                 ping, # keep alive by calling GetGameInfo every 5 seconds
-                delay=args.ping
+                delay=max(args.ping, 0.5)
             )
         )
         print("Game complete:", "Win" if result == p1 else "Lose")
