@@ -85,8 +85,8 @@ def __main__(args):
         result = asyncio.run(
             risk.utils.repeat_until_done(
                 game.play_loop_async(bot, callback=risk.compose_callbacks(*callbacks)),
-                delay=args.ping if args.ping > 0 else float("inf"),
                 ping, # keep alive by calling GetGameInfo every 5 seconds
+                delay=args.ping if args.ping > 0 else float("inf"),
             )
         )
         print("Game complete:", "Win" if result == p1 else "Lose")
