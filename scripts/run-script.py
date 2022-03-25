@@ -77,6 +77,7 @@ def __main__(args):
         data["replay"] = f"replays/{gameid}.xml"
     try:
         def ping():
+            if args.ping == 0: return
             if args.save_replay:
                 risk.api.saveReplay(gameid, f"{args.output_dir}/replays/{gameid}.xml")
             elif botgame:
@@ -86,7 +87,7 @@ def __main__(args):
             risk.utils.repeat_until_done(
                 game.play_loop_async(bot, callback=risk.compose_callbacks(*callbacks)),
                 ping, # keep alive by calling GetGameInfo every 5 seconds
-                delay=args.ping if args.ping > 0 else float("inf"),
+                delay=args.ping
             )
         )
         print("Game complete:", "Win" if result == p1 else "Lose")
