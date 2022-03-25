@@ -61,6 +61,7 @@ def run(args):
             raise Exception(f"Expecting 'local: True' or 'player 2: default'")
         config["player"] = None
         config["resume"] = None
+        config["ping"] = args.ping
 
     config["map-cache"] = args.map_cache
     config["output-dir"] = args.dir
@@ -129,6 +130,7 @@ if __name__ == "__main__":
     run_parse.add_argument("dir", type=str, help="")
     run_parse.add_argument("--games", type=int, default=1, help="")
     run_parse.add_argument("--map-cache", type=str, default="cached-maps", help="")
+    run_parse.add_argument("--ping", type=int, default=0, help="")
     analyze_parse = subparser.add_parser("analyze")
     analyze_parse.add_argument("dir", type=str, help="")
     args = parser.parse_args()

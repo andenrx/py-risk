@@ -85,7 +85,7 @@ def __main__(args):
         result = asyncio.run(
             risk.utils.repeat_until_done(
                 game.play_loop_async(bot, callback=risk.compose_callbacks(*callbacks)),
-                delay=5,
+                delay=args.ping if args.ping > 0 else float("inf"),
                 ping, # keep alive by calling GetGameInfo every 5 seconds
             )
         )
@@ -110,6 +110,7 @@ if __name__ == "__main__":
     parser.add_argument("--iter", type=int, default=100, help="Number of iterations to run per turn")
     parser.add_argument("--output-dir", type=str, default=None, help="Directory to store run data in")
     parser.add_argument("--save-replay", type=strtobool, default=False, help="")
+    parser.add_argument("--ping", type=int, default=0, help="")
     parser.add_argument("--model", type=str, default=None, help="")
     parser.add_argument("--max-depth", type=int, default=25, help="")
     parser.add_argument("--policy-trust", type=float, default=1.0, help="")
