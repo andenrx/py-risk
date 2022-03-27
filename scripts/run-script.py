@@ -14,10 +14,12 @@ except ImportError:
     pass
 
 def __main__(args):
-    botgame = args.player is None
+    botgame = args.player is None or args.player == "AI@warlight.net"
     mapid = risk.api.MapID[args.map]
     if args.resume is None:
-        if botgame:
+        if args.player is None:
+            invite = [1, 2]
+        elif botgame:
             invite = [1, "AI@warlight.net"]
         else:
             invite = ["me", args.player]
@@ -106,7 +108,7 @@ def __main__(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play game")
     parser.add_argument("--map", type=str, default="ITALY", choices=[map.name for map in risk.api.MapID], help="The map to play on")
-    parser.add_argument("--player", type=str, default=None, help="Email of the player to start the game against, default plays against the built in AI")
+    parser.add_argument("--player", type=lambda s: None if s == "None" else s, default="AI@warlight.net", help="Email of the player to start the game against, default plays against the built in AI")
     parser.add_argument("--resume", type=int, default=None, help="The game id to resume playing, default starts a new game")
     parser.add_argument("--iter", type=int, default=100, help="Number of iterations to run per turn")
     parser.add_argument("--output-dir", type=str, default=None, help="Directory to store run data in")

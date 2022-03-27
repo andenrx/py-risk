@@ -57,9 +57,9 @@ def run(args):
         player_settings["model-type"] = model_builder(player_settings["model-type"])
         for key, value in player_settings.items():
             config[key] = value
-        if config.pop("player 2") != "default":
-            raise Exception(f"Expecting 'local: True' or 'player 2: default'")
-        config["player"] = None
+        if config.get("player 2", "default") != "default":
+            raise Exception(f"Expecting 'local: True' or 'player 2: default' or null")
+        config["player"] = "AI@warlight.net" if config.pop("player 2", None) == "default" else None
         config["resume"] = None
         config["ping"] = args.ping
         config["save-replay"] = True
