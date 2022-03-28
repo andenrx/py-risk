@@ -28,7 +28,7 @@ class MapStructure:
         self.id = mapid
         self.name = name
         self.graph = graph
-        self.bonuses = bonuses
+        self.bonuses = [bonus for bonus in bonuses if bonus.value != 0]
         self.ids = ids
 
     def randState(self):
