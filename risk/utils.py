@@ -5,6 +5,7 @@ import asyncio
 
 from . import api
 from .game_types import MapStructure
+import collections
 
 def load_mapstruct(mapid: int, cache=None) -> MapStructure:
     """Download a map or load it from a cache"""
@@ -38,3 +39,17 @@ async def repeat_until_done(coro, func, delay=1):
         await asyncio.sleep(delay)
     return task.result()
 
+from time import time
+class TimeManager:
+    tbl = collections.defaultdict(float)
+    def __init__(self, name):
+        self.name = name
+    def __enter__(self, *args):
+        self.start = time()
+    def __exit__(self, *args):
+        elapsed = time() - self.start
+        TimeManager.tbl[self.name] += elapsed
+
+    def print():
+        for k, v in TimeManager.tbl.items():
+            print(k, v)

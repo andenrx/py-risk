@@ -6,6 +6,7 @@ import os
 import json
 from .game_types import MapState
 from .orders import *
+from .utils import TimeManager
 
 def load_data(directory, mapstruct):
     data = []
@@ -1194,6 +1195,94 @@ class Model19(torch.nn.Module):
             state_value=state_value,
         )
 
+class Model19Test(torch.nn.Module):
+    def predict_policy(self): return False
+    def batched(self): return True
+
+    def __init__(self):
+        super().__init__()
+        UNITS = 50
+
+        self.init_layer1 = Linear(5, UNITS)
+        self.init_layer2 = Linear(UNITS, UNITS)
+        self.g1 = TransformerConv(UNITS, UNITS, beta=True)
+        self.g2 = TransformerConv(2*UNITS, UNITS, beta=True)
+        self.linear = Linear(3*UNITS, 3*UNITS)
+        self.bonus_layer1 = Linear(3*UNITS+5, 2*UNITS)
+        self.bonus_layer2 = Linear(2*UNITS, UNITS)
+        self.final1 = Linear(4*UNITS+2, 2*UNITS)
+        self.final2 = Linear(2*UNITS, 1)
+
+    def forward(self, data):
+        NORM_CONST_1 = global_add_pool(data.bonus_values[:,None], data.bonus_batch_) + 5
+        NORM_CONST_2 = 5
+        NORM_CONST_3 = global_mean_pool(data.graph_features[:,2:], data.batch).sum(1)
+
+        x = x_orig = torch.cat([data.graph_features[:,:2], data.graph_features[:,2:] / NORM_CONST_3[data.batch, None]], dim=1)
+        x = F.relu(self.init_layer1(x))
+        x = F.relu(self.init_layer2(x))
+
+        g = F.relu(self.g1(x, data.graph_edges))
+        x = torch.cat([x, g], dim=1)
+        g = F.relu(self.g2(x, data.graph_edges))
+        x = torch.cat([x, g], dim=1)
+
+        x = F.relu(self.linear(x))
+
+        x_tmp = torch.cat([x, x_orig], dim=1)
+        bonus_features = global_mean_pool(x_tmp[data.bonus_mapping[0]], data.bonus_mapping[1])
+        bonus_features = F.relu(self.bonus_layer1(bonus_features))
+        bonus_features = self.bonus_layer2(bonus_features)
+        bonus_features = torch.sigmoid(bonus_features)
+
+        bonus_agg = global_add_pool(bonus_features * data.bonus_values[:,None], data.bonus_batch_)
+        bonus_agg /= NORM_CONST_1
+
+        x_agg = global_mean_pool(x, data.batch)
+
+        agg = torch.cat([x_agg, bonus_agg, data.income / NORM_CONST_2], dim=1)
+        agg = F.relu(self.final1(agg))
+        return torch.tanh(self.final2(agg)).view(-1)
+
+    @lru_cache(32)
+    def bonus_tensors(self, mapstruct):
+        values = []
+        batch = [0] * len(mapstruct.bonuses)
+        for bonus in mapstruct.bonuses:
+            values.append(bonus.value)
+        return torch.tensor(values), torch.tensor(batch)
+
+    def to_tensor(_, self, p1, p2):
+        graph_features = torch.tensor(np.array([
+            self.owner == p1,
+            self.owner == p2,
+            self.armies * (self.owner == p1),
+            self.armies * (self.owner == p2),
+            self.armies * (self.owner == 0),
+        ]), dtype=torch.float).T
+        return graph_features
+
+    def prep(self, state, p1=1, p2=2, state_value=None):
+        assert state.winner() is not None or (state.owner == p1).any() and (state.owner == p2).any()
+        edges = state.mapstruct.edgeTensor()
+        values, bonus_batch = self.bonus_tensors(state.mapstruct)
+        assert torch_geometric.utils.is_undirected(edges)
+        i1, i2 = state.income(p1), state.income(p2)
+        graph_features = self.to_tensor(state, p1, p2)
+        return StateData(
+            map=int(state.mapstruct.id),
+            graph_features=graph_features,
+            graph_edges=edges,
+            bonus_values=values,
+            bonus_batch_=bonus_batch,
+            bonus_mapping=get_bonus_mapping(state.mapstruct),
+            income=torch.tensor([i1, i2]).view(1,-1),
+            num_nodes=len(graph_features),
+            num_bonuses=len(values),
+            state=state,
+            state_value=state_value,
+        )
+
 class LinearModel(torch.nn.Module):
     def predict_policy(self): return False
     def batched(self): return True
@@ -1217,4 +1306,103 @@ class LinearModel(torch.nn.Module):
 
     def to_tensor(self, *args, **kwargs):
         return Model19.to_tensor(self, *args, **kwargs)
+
+class Model20(torch.nn.Module):
+    def predict_policy(self): return False
+    def batched(self): return True
+
+    def __init__(self):
+        super().__init__()
+        UNITS = 50
+
+        self.init_layer1 = Linear(5, UNITS)
+        self.init_layer2 = Linear(UNITS, UNITS)
+        self.g1 = TransformerConv(UNITS, UNITS, beta=True)
+        self.g2 = TransformerConv(2*UNITS, UNITS, beta=True)
+        self.linear = Linear(3*UNITS, 3*UNITS)
+        self.bonus_layer1 = Linear(3*UNITS+7, 2*UNITS)
+        self.bonus_layer2 = Linear(2*UNITS, UNITS)
+        self.final1 = Linear(4*UNITS+2, 2*UNITS)
+        self.final2 = Linear(2*UNITS, 1)
+
+    def forward(self, data):
+        NORM_CONST_1 = global_add_pool(data.bonus_values[:,None], data.bonus_batch_) + 5
+        NORM_CONST_2 = 5
+
+        x = x_orig = data.graph_features
+        x = F.relu(self.init_layer1(x))
+        x = F.relu(self.init_layer2(x))
+
+        g = F.relu(self.g1(x, data.graph_edges))
+        x = torch.cat([x, g], dim=1)
+        g = F.relu(self.g2(x, data.graph_edges))
+        x = torch.cat([x, g], dim=1)
+
+        x = F.relu(self.linear(x))
+
+        x_tmp = torch.cat([x, x_orig], dim=1)
+        bonus_features = global_mean_pool(x_tmp[data.bonus_mapping[0]], data.bonus_mapping[1])
+        bonus_features = torch.cat([bonus_features, data.bonus_turns_to_take], dim=1)
+        bonus_features = F.relu(self.bonus_layer1(bonus_features))
+        bonus_features = self.bonus_layer2(bonus_features)
+        bonus_features = torch.sigmoid(bonus_features)
+
+        bonus_agg = global_add_pool(bonus_features * data.bonus_values[:,None], data.bonus_batch_)
+        bonus_agg /= NORM_CONST_1
+
+        x_agg = global_mean_pool(x, data.batch)
+
+        agg = torch.cat([x_agg, bonus_agg, data.income / NORM_CONST_2], dim=1)
+        agg = F.relu(self.final1(agg))
+        return torch.tanh(self.final2(agg)).view(-1)
+
+    @lru_cache(32)
+    def bonus_tensors(self, mapstruct):
+        values = []
+        batch = [0] * len(mapstruct.bonuses)
+        for bonus in mapstruct.bonuses:
+            values.append(bonus.value)
+        return torch.tensor(values), torch.tensor(batch)
+
+    def to_tensor(_, self, p1, p2):
+        graph_features = torch.tensor(np.array([
+            self.owner == p1,
+            self.owner == p2,
+            self.armies * (self.owner == p1),
+            self.armies * (self.owner == p2),
+            self.armies * (self.owner == 0),
+        ]), dtype=torch.float).T
+        return graph_features
+
+    def turns_to_complete(self, mapstate, bonus, player):
+        with TimeManager("turns_to_complete"):
+            x = np.array(
+            mapstate.mapstruct.graph.shortest_paths(list(bonus.terr), np.where(mapstate.owner == player)[0])
+        ).min(1).max()
+        return x
+
+    def prep(self, state, p1=1, p2=2, state_value=None):
+        assert state.winner() is not None or (state.owner == p1).any() and (state.owner == p2).any()
+        edges = state.mapstruct.edgeTensor()
+        values, bonus_batch = self.bonus_tensors(state.mapstruct)
+        assert torch_geometric.utils.is_undirected(edges)
+        i1, i2 = state.income(p1), state.income(p2)
+        graph_features = self.to_tensor(state, p1, p2)
+        return StateData(
+            map=int(state.mapstruct.id),
+            graph_features=graph_features,
+            graph_edges=edges,
+            bonus_values=values,
+            bonus_batch_=bonus_batch,
+            bonus_mapping=get_bonus_mapping(state.mapstruct),
+            bonus_turns_to_take=torch.tensor([
+              [self.turns_to_complete(state, bonus, i) for i in [1,2]]
+              for bonus in state.mapstruct.bonuses
+            ], dtype=torch.float),
+            income=torch.tensor([i1, i2]).view(1,-1),
+            num_nodes=len(graph_features),
+            num_bonuses=len(values),
+            state=state,
+            state_value=state_value,
+        )
 

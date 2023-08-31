@@ -7,6 +7,7 @@ from .pygad import create
 from .orders import OrderList
 from time import time
 import math
+from .utils import TimeManager
 
 def model_builder(model_type):
     types = {
@@ -341,9 +342,12 @@ class RaveNode(Node):
 class Genetic(MCTS):
     def __init__(self, *args, **settings):
         self.pop_size = settings.pop('pop_size', 50)
+        self.max_dist = settings.pop('max_dist', float('inf'))
+        self.rounds = settings.pop('rounds', 1)
         super().__init__(*args, **settings)
         self.elapsed = 0
         self.setMapState(None)
+        self.turn = 0
 
     def setMapState(self, mapstate):
         self.root_node = self.NodeType(mapstate)
@@ -351,23 +355,69 @@ class Genetic(MCTS):
         self.root_node.visits = 0
 
     def play(self, mapstate):
+        self.turn += 1
         assert mapstate.winner() is None
         self.setMapState(mapstate)
-        ga = create(
-            mapstate,
-            iterations=self.iters,
-            pop_size=self.pop_size,
-            p1=self.player,
-            p2=self.opponent,
-            model=self.model,
-            timeout=self.timeout,
-            mutation_rate=self.exploration,
-            mirror_model=self.mirror_model,
-        )
-        start = time()
-        ga.run()
-        self.elapsed = time() - start
-        self.root_node.win_value += ga.last_generation_fitness[0].sum()
-        self.root_node.visits += ga.population.shape[1]
-        return OrderList.from_gene(ga.population[0, ga.last_generation_fitness[0].argmax()], mapstate.mapstruct, self.player)
+        dist_to_opponent = np.array(mapstate.mapstruct.graph.shortest_paths(np.where(mapstate.owner == self.player)[0], np.where(mapstate.owner == self.opponent)[0])).min()
+
+        from torch_geometric.loader import DataLoader
+        if dist_to_opponent <= self.max_dist:
+            ga = create(
+                mapstate,
+                iterations=self.iters,
+                pop_size=self.pop_size,
+                p1=self.player,
+                p2=self.opponent,
+                model=self.model,
+                timeout=self.timeout,
+                mutation_rate=self.exploration,
+                mirror_model=self.mirror_model,
+                rounds=self.rounds,
+            )
+            start = time()
+            ga.run()
+            self.elapsed = time() - start
+            self.root_node.win_value += ga.last_generation_fitness[0].sum()
+            self.root_node.visits += ga.population.shape[1]
+            TimeManager.print()
+            return OrderList.from_gene(ga.population[0, ga.last_generation_fitness[0].argmax()], mapstate.mapstruct, self.player)
+        else:
+            start = time()
+            m1s = [rand_obj(mapstate, self.player, self.opponent) for _ in range(self.pop_size)]
+            m2s = [rand_obj(mapstate, self.player, self.opponent) for _ in range(self.pop_size)]
+
+            prepped_states = []
+            prepped_states2 = []
+            for i, m1 in enumerate(m1s):
+                for j, m2 in enumerate(m2s):
+                    result = (m1 | m2)(mapstate)
+                    prepped = self.model.prep(result, p1=self.player, p2=self.opponent)
+                    prepped.i = i
+                    prepped.j = j
+                    prepped_states.append(prepped)
+                    prepped = self.model.prep(result, p1=self.opponent, p2=self.player)
+                    prepped.i = i
+                    prepped.j = j
+                    prepped_states2.append(prepped)
+            tbl = np.zeros((self.pop_size, self.pop_size))
+            diff_tbl = np.zeros((self.pop_size, self.pop_size))
+            comb_tbl = np.zeros((self.pop_size, self.pop_size))
+            with torch.no_grad():
+                for sample in DataLoader(prepped_states, batch_size=400):
+                    pred = self.model(sample)
+                    tbl[sample.i, sample.j] = pred.numpy()
+                    comb_tbl[sample.i, sample.j] += pred.numpy()
+                for sample in DataLoader(prepped_states2, batch_size=400):
+                    pred = self.model(sample)
+                    diff_tbl[sample.i, sample.j] = pred.numpy()
+                    comb_tbl[sample.i, sample.j] -= pred.numpy()
+            comb_tbl /= 2
+
+            i = comb_tbl.mean(1).argmax()
+            m = m1s[i]
+
+            self.elapsed = time() - start
+            self.root_node.win_value = comb_tbl.mean(1).max()
+            self.root_node.visits = 1
+            return m
 

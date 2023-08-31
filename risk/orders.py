@@ -1,5 +1,6 @@
 import numpy as np
 from .game_types import MapStructure
+from functools import lru_cache
 
 def fixed_round(x):
     return int(np.floor(x + 0.5))
@@ -216,6 +217,28 @@ class OrderList(list, Order):
 
     def to_gene(self, mapstruct):
         edges = mapstruct.edgeLabels()
+        data = np.zeros(len(edges), dtype=int)
+        for order in self:
+            if isinstance(order, AttackTransferOrder):
+                data[edges[order.src, order.dst]] += order.armies
+            elif isinstance(order, DeployOrder):
+                data[edges[order.target, order.target]] += order.armies
+            else: assert False
+        assert (data >= 0).all()
+        return data
+
+
+    @lru_cache(32)
+    def filtered_edgeLabels(mapstruct, player):
+        edges = mapstruct.edgeLabels()
+        edges2 = {}
+        for src, dst in edges:
+            if mapstate.owner[src] == player:
+                edges2[src, dst] = len(edges2)
+        return edges2
+
+    def to_gene_compact(self, mapstate, player):
+        edges = type(self).filtered_edgeLabels(mapstate.mapstruct, player)
         data = np.zeros(len(edges), dtype=int)
         for order in self:
             if isinstance(order, AttackTransferOrder):

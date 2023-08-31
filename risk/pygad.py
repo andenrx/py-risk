@@ -1,6 +1,7 @@
 import risk
 from risk.orders import *
 from risk.rand import rand_move
+from risk.objectives import rand_obj
 from time import time
 import numpy as np
 import pygad
@@ -28,11 +29,12 @@ def create(
         iterations=5,
         pop_size=10,
         max_iter=100,
-        rounds=5,
+        rounds=1,
         timeout=np.inf,
         mutation_rate=0.04,
         mirror_model=False,
     ):
+    print(rounds)
     mapstruct = mapstate.mapstruct
 
     table = np.zeros((pop_size, pop_size))
@@ -47,6 +49,14 @@ def create(
                     m1 = OrderList.from_gene(population[0,i], mapstruct, p1)
                     m2 = OrderList.from_gene(population[1,j], mapstruct, p2)
                     result = (m1 | m2)(mapstate)
+
+                    for i in range(rounds-1):
+                        if result.winner() is None:
+                            result = (
+                                #rand_obj(mapstate, p1, p2) | rand_obj(mapstate, p2, p1)
+                                rand_move(mapstate, p1) | rand_move(mapstate, p2)
+                            )(result)
+
                     prepped = model.prep(result, p1=p1, p2=p2)
                     prepped.i = i
                     prepped.j = j
@@ -60,6 +70,7 @@ def create(
                         prepped.player = p2
                         states.append(prepped)
 
+
             dl = DataLoader(states, batch_size=400)
             with torch.no_grad():
                 for sample in dl:
@@ -67,11 +78,11 @@ def create(
                     for v, i, j, state, player in zip(pred, sample.i, sample.j, sample.state, sample.player):
                         if state.winner() is None:
                             if not mirror_model:
-                                table[i, j] = v * 0.995
+                                table[i, j] = v * 0.995 / rounds
                             else:
-                                table[i, j] += v * 0.995 * (0.5 if player == p1 else -0.5)
+                                table[i, j] += v * 0.995 * (0.5 if player == p1 else -0.5) / rounds
                         else:
-                            table[i, j] = 1 if state.winner() == p1 else -1
+                            table[i, j] += (1 if state.winner() == p1 else -1) / (2*rounds if mirror_model else rounds)
         else:
             for i in range(pop_size):
                 for j in range(pop_size):
@@ -147,6 +158,12 @@ def create(
         initial_population=np.array([
             [rand_move(mapstate, p1).to_gene(mapstruct) for _ in range(pop_size)],
             [rand_move(mapstate, p2).to_gene(mapstruct) for _ in range(pop_size)],
+            #[rand_obj(mapstate, p1, p2).to_gene(mapstruct) for _ in range(pop_size)],
+            #[rand_obj(mapstate, p2, p1).to_gene(mapstruct) for _ in range(pop_size)],
+            #[rand_move(mapstate, p1).to_gene(mapstruct) for _ in range(pop_size//2)]
+            #+[rand_obj(mapstate, p1, p2).to_gene(mapstruct) for _ in range(pop_size//2)],
+            #[rand_move(mapstate, p2).to_gene(mapstruct) for _ in range(pop_size//2)]
+            #+[rand_obj(mapstate, p2, p1).to_gene(mapstruct) for _ in range(pop_size//2)],
         ]),
         gene_type=int,
         parent_selection_type="rank",
