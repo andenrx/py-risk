@@ -44,6 +44,7 @@ def __main__(args):
             alpha=args.alpha_1,
             pop_size=args.pop_size_1,
             mirror_model=args.mirror_model_1,
+            rounds=args.rounds_1,
     )
     bot2 = args.model_type_2(
             None, 2, 1, model2,
@@ -58,6 +59,7 @@ def __main__(args):
             alpha=args.alpha_2,
             pop_size=args.pop_size_2,
             mirror_model=args.mirror_model_2,
+            rounds=args.rounds_2,
     )
     game = risk.LocalGameManager.fromMap(mapid, cache=args.map_cache)
 
@@ -110,5 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("--pop-size-2", type=int, default=50, help="")
     parser.add_argument("--mirror-model-1", type=strtobool, default=False, help="")
     parser.add_argument("--mirror-model-2", type=strtobool, default=False, help="")
+    parser.add_argument("--rounds-1", type=int, default=1, help="")
+    parser.add_argument("--rounds-2", type=int, default=1, help="")
     __main__(parser.parse_args())
 

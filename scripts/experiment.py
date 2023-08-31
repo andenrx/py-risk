@@ -60,7 +60,7 @@ def run(args):
         if config.get("player 2", "default") != "default":
             raise Exception(f"Expecting 'local: True' or 'player 2: default' or null")
         config["player"] = "AI@warlight.net" if config.pop("player 2", None) == "default" else None
-        config["resume"] = None
+        config["resume"] = args.gameid
         config["ping"] = args.ping
         config["save-replay"] = True
 
@@ -73,6 +73,8 @@ def run(args):
     for i in range(1, args.games + 1):
         if isinstance(maps, list):
             config["map"] = random.choice(maps)
+        if args.maps:
+            config["map"] = args.maps.pop(0)
         if args.games > 1:
             print(f"Round {i}")
         try:
@@ -136,10 +138,16 @@ if __name__ == "__main__":
     run_parse.add_argument("--games", type=int, default=1, help="")
     run_parse.add_argument("--map-cache", type=str, default="cached-maps", help="")
     run_parse.add_argument("--ping", type=int, default=0, help="")
+    run_parse.add_argument("--gameid", type=int, default=None, help="")
+    run_parse.add_argument("maps", type=str, nargs="+")
     analyze_parse = subparser.add_parser("analyze")
     analyze_parse.add_argument("dir", type=str, help="")
     args = parser.parse_args()
     if args.subparser_name == "run":
+        if args.maps:
+            args.games = len(args.maps)
+        print(args.maps)
+        assert all(mapid in [mapid.name for mapid in risk.api.MapID] for mapid in args.maps)
         run(args)
     elif args.subparser_name == "analyze":
         analyze(args)
