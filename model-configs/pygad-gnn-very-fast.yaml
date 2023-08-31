@@ -1,0 +1,8 @@
+# Modified from pygad-gnn.yaml to cut run time down by another 75%
+model: best-model.pkl
+model-type: Genetic
+iter: 10
+pop-size: 20
+exploration: 0.25
+mirror-model: False
+

@@ -1,0 +1,6 @@
+model: linear.pkl
+model-type: Genetic
+iter: 25
+pop-size: 25 # reduced from 30
+exploration: 0.25
+mirror-model: False # from True

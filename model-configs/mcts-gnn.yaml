@@ -1,0 +1,6 @@
+model: best-model.pkl
+model-type: MCTS
+iter: 200
+moves-consider: 20
+exploration: 1.0
+cache-opponent-moves: True

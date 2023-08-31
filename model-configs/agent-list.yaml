@@ -1,0 +1,34 @@
+pygad-gnn:
+    model: best-model.pkl
+    model-type: Genetic
+    iter: 25
+    pop-size: 30
+    exploration: 0.25
+    mirror-model: True
+vanilla-mcts:
+    model: null
+    model-type: MCTS
+    iter: 200
+    moves-consider: 20
+    exploration: 1.0
+    cache-opponent-moves: True
+mcts-gnn:
+    model: best-model.pkl
+    model-type: MCTS
+    iter: 200
+    moves-consider: 20
+    exploration: 1.0
+    cache-opponent-moves: True
+pygad-linear:
+    model: linear-model.pkl
+    model-type: Genetic
+    iter: 25
+    pop-size: 30
+    exploration: 0.25
+    mirror-model: True
+random:
+    model: null
+    model-type: Random
+default: null
+cowzow: null
+
